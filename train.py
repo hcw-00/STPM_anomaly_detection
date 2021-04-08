@@ -2,6 +2,7 @@ import argparse
 import torch
 from torchvision import transforms, datasets
 from torch.utils.data import Dataset, DataLoader
+import torch.nn.functional as F
 import cv2
 import numpy as np
 import os
@@ -189,6 +190,8 @@ if __name__ == '__main__':
     gt_path = os.path.join(dataset_path, 'ground_truth')
     test_imgs = glob.glob(test_path + '/[!good]*/*.png', recursive=True)
     gt_imgs = glob.glob(gt_path + '/[!good]*/*.png', recursive=True)
+    gt_val_list = []
+    anomaly_val_list = []
     auc_score_list = []
     start_time = time.time()
     for i in range(len(test_imgs)):
@@ -206,10 +209,10 @@ if __name__ == '__main__':
         anomaly_map = anomaly_map[0,0,:,:].to('cpu').detach().numpy().ravel()
         gt_img = cv2.imread(gt_img_path,0)
         gt_img = cv2.resize(gt_img, (input_size, input_size)).ravel()//255
-        
-        auc_score_list.append(roc_auc_score(gt_img, anomaly_map))
+        gt_val_list.extend(gt_img)
+        anomaly_val_list.extend(anomaly_map)
 
     print('Total test time consumed : {}'.format(time.time() - start_time))
     print("Total auc score is :")
-    print(np.mean(auc_score_list))
+    print(roc_auc_score(gt_val_list, anomaly_val_list))
 
