@@ -12,6 +12,10 @@ python train.py --dataset_path '...\mvtec_anomaly_detection\bottle' --project_pa
 MVTecAD pixel-level AUC-ROC score (mean of 3 trials)
 | Category | Original paper | This code |
 | :-----: | :-: | :-: |
+| Carpet | 0.988 | ~ | 
+| :-----: | :-: | :-: |
+| Grid | 0.990 | ~ | 
+| :-----: | :-: | :-: |
 | Bottle | 0.988 | 0.984(1) | 
 
 Under testing.
