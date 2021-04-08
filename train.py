@@ -16,7 +16,19 @@ from sklearn.metrics import roc_auc_score
 mean_train = [0.485, 0.456, 0.406]
 std_train = [0.229, 0.224, 0.225]
 
-def data_transforms(load_size=256, input_size=256):
+def calc_avg_mean_std(img_names, img_root):
+    mean_sum = np.array([0., 0., 0.])
+    std_sum = np.array([0., 0., 0.])
+    n_images = len(img_names)
+    for img_name in img_names:
+        img = cv2.imread(os.path.join(img_root, img_name))
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        mean, std = cv2.meanStdDev(img)
+        mean_sum += np.squeeze(mean)
+        std_sum += np.squeeze(std)
+    return (mean_sum / n_images / 255, std_sum / n_images / 255)
+
+def data_transforms(input_size=256, mean_train=mean_train, std_train=std_train):
     data_transforms = transforms.Compose([
             transforms.ToTensor(),
             transforms.Resize((input_size, input_size)),
@@ -74,7 +86,6 @@ def get_args():
     parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
-    parser.add_argument('--load_size', default=256)
     parser.add_argument('--input_size', default=256)
     parser.add_argument('--project_path', default='D:/Project_Train_Results/mvtec_anomaly_detection/bottle')
     parser.add_argument('--save_weight', default=False)
@@ -100,7 +111,6 @@ if __name__ == '__main__':
     lr = args.lr
     batch_size = args.batch_size
     save_weight = args.save_weight
-    load_size = args.load_size
     input_size = args.input_size
     save_src_code = args.save_src_code
     project_path = args.project_path
@@ -116,8 +126,13 @@ if __name__ == '__main__':
     ################################################
     ###             Define Dataset               ###
     ################################################
+    # calc mean, std
+    train_root_path = os.path.join(dataset_path, 'train', 'good')
+    mean_train, std_train = calc_avg_mean_std(os.listdir(train_root_path), train_root_path)
+    print("mean_train : ", mean_train)
+    print("mean_train : ", std_train)
 
-    data_transform = data_transforms(input_size=input_size)
+    data_transform = data_transforms(input_size=input_size, mean_train=mean_train, std_train=std_train)
     # data_transforms_inv = data_transforms_inv()
     image_datasets = datasets.ImageFolder(root=os.path.join(dataset_path, 'train'), transform=data_transform)
     dataloaders = DataLoader(image_datasets, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
@@ -174,7 +189,6 @@ if __name__ == '__main__':
     gt_path = os.path.join(dataset_path, 'ground_truth')
     test_imgs = glob.glob(test_path + '/[!good]*/*.png', recursive=True)
     gt_imgs = glob.glob(gt_path + '/[!good]*/*.png', recursive=True)
-    test_transform = data_transforms()
     auc_score_list = []
     start_time = time.time()
     for i in range(len(test_imgs)):
@@ -183,7 +197,7 @@ if __name__ == '__main__':
         assert os.path.split(test_img_path)[1].split('.')[0] == os.path.split(gt_img_path)[1].split('_')[0], "Something wrong with test and ground truth pair!"
         test_img_o = cv2.imread(test_img_path)
         test_img = Image.fromarray(test_img_o)
-        test_img = test_transform(test_img)
+        test_img = data_transform(test_img)
         test_img = torch.unsqueeze(test_img, 0).to(device)
         with torch.set_grad_enabled(False):
             _, f2t, f3t, f4t, f5t = model_t(test_img)
