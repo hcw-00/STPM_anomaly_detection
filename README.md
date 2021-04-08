@@ -1,7 +1,7 @@
 # STPM_anomaly_detection
 Unofficial pytorch implementation of  
 Student-Teacher Feature Pyramid Matching for Unsupervised Anomaly Detection (STPM) 
-\- Guodong Wang, Shumin Han, Errui Ding, Di Huang  (2021)
+\- Guodong Wang, Shumin Han, Errui Ding, Di Huang  (2021)  
 https://arxiv.org/abs/2103.04257v2 
 
 Usage 
