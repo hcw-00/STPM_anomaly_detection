@@ -9,9 +9,9 @@ Usage
 python train.py --dataset_path '...\mvtec_anomaly_detection\bottle' --project_path 'path\to\save\results'
 ~~~
 
-MVTecAD pixel-level AUC-ROC score 
+MVTecAD pixel-level AUC-ROC score (mean of 3 trials)
 | Category | Original paper | This code |
 | :-----: | :-: | :-: |
-| Bottle | 0.988 | 0.984 | 
+| Bottle | 0.988 | 0.984(1) | 
 
 Under testing.
