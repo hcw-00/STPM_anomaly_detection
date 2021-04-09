@@ -14,4 +14,6 @@ MVTecAD pixel-level AUC-ROC score (mean of 3 trials)
 | :-----: | :-: | :-: |
 | bottle | 0.988 | 0.984(1)|
 
-Under testing.
+Under testing.  
+
+notice : Depending on the test results, the code can be modified.
