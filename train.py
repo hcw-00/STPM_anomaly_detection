@@ -85,7 +85,7 @@ def cal_anomaly_map(fs_list, ft_list, out_size=256):
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
     parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\grid')
-    parser.add_argument('--num_epoch', default=1)
+    parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--input_size', default=256)
