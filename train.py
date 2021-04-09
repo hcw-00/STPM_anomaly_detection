@@ -13,7 +13,7 @@ from resnet_modified import resnet18
 from PIL import Image
 from sklearn.metrics import roc_auc_score
 
-
+#imagenet
 mean_train = [0.485, 0.456, 0.406]
 std_train = [0.229, 0.224, 0.225]
 
@@ -83,7 +83,7 @@ def cal_anomaly_map(fs_list, ft_list, out_size=256):
 
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
-    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\bottle')
+    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\grid')
     parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
@@ -128,10 +128,10 @@ if __name__ == '__main__':
     ###             Define Dataset               ###
     ################################################
     # calc mean, std
-    train_root_path = os.path.join(dataset_path, 'train', 'good')
-    mean_train, std_train = calc_avg_mean_std(os.listdir(train_root_path), train_root_path)
-    print("mean_train : ", mean_train)
-    print("mean_train : ", std_train)
+    # train_root_path = os.path.join(dataset_path, 'train', 'good')
+    # mean_train, std_train = calc_avg_mean_std(os.listdir(train_root_path), train_root_path)
+    # print("mean_train : ", mean_train)
+    # print("mean_train : ", std_train)
 
     data_transform = data_transforms(input_size=input_size, mean_train=mean_train, std_train=std_train)
     # data_transforms_inv = data_transforms_inv()
