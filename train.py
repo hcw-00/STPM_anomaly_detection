@@ -9,9 +9,10 @@ import os
 import glob
 import shutil
 import time
-from resnet_modified import resnet18
+from torchvision.models import resnet18
 from PIL import Image
 from sklearn.metrics import roc_auc_score
+
 
 #imagenet
 mean_train = [0.485, 0.456, 0.406]
@@ -84,7 +85,7 @@ def cal_anomaly_map(fs_list, ft_list, out_size=256):
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
     parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\grid')
-    parser.add_argument('--num_epoch', default=100)
+    parser.add_argument('--num_epoch', default=1)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--input_size', default=256)
@@ -142,11 +143,26 @@ if __name__ == '__main__':
     ################################################
     ###             Define Network               ###
     ################################################
-    model_t = resnet18(pretrained=True, num_classes=1).to(device)
-    model_s = resnet18(pretrained=False, num_classes=1).to(device)
+    features_t = []
+    features_s = []
+    def hook_t(module, input, output):
+        features_t.append(output)
+    def hook_s(module, input, output):
+        features_s.append(output)
+
+    model_t = resnet18(pretrained=True).to(device)
+    model_t.layer1[-1].register_forward_hook(hook_t)
+    model_t.layer2[-1].register_forward_hook(hook_t)
+    model_t.layer3[-1].register_forward_hook(hook_t)
+
+    model_s = resnet18(pretrained=False).to(device)
+    model_s.layer1[-1].register_forward_hook(hook_s)
+    model_s.layer2[-1].register_forward_hook(hook_s)
+    model_s.layer3[-1].register_forward_hook(hook_s)
+
     criterion = torch.nn.MSELoss(reduction='sum')
     optimizer = torch.optim.SGD(model_s.parameters(), lr=lr, momentum=0.9, weight_decay=0.0001)
-    
+
     ################################################
     ###               Start Train                ###
     ################################################
@@ -166,11 +182,16 @@ if __name__ == '__main__':
             batch = batch.to(device)
             optimizer.zero_grad()
             with torch.set_grad_enabled(True):
-                _, f2t, f3t, f4t, f5t = model_t(batch)
-                _, f2s, f3s, f4s, f5s = model_s(batch)
-                loss = cal_loss([f2s,f3s,f4s], [f2t,f3t,f4t], criterion)
+                
+                _ = model_t(batch)
+                _ = model_s(batch)
+                loss = cal_loss(features_s, features_t, criterion)
                 loss.backward()
                 optimizer.step()
+
+                features_t = []
+                features_s = []
+
             if idx%2 == 0:
                 print('Epoch : {} | Loss : {:.4f}'.format(epoch, float(loss.data)))
 
@@ -203,14 +224,17 @@ if __name__ == '__main__':
         test_img = data_transform(test_img)
         test_img = torch.unsqueeze(test_img, 0).to(device)
         with torch.set_grad_enabled(False):
-            _, f2t, f3t, f4t, f5t = model_t(test_img)
-            _, f2s, f3s, f4s, f5s = model_s(test_img)
-        anomaly_map = cal_anomaly_map([f2s,f3s,f4s], [f2t,f3t,f4t], out_size=input_size)
+            _ = model_t(test_img)
+            _ = model_s(test_img)
+        anomaly_map = cal_anomaly_map(features_s, features_t, out_size=input_size)
         anomaly_map = anomaly_map[0,0,:,:].to('cpu').detach().numpy().ravel()
         gt_img = cv2.imread(gt_img_path,0)
         gt_img = cv2.resize(gt_img, (input_size, input_size)).ravel()//255
         gt_val_list.extend(gt_img)
         anomaly_val_list.extend(anomaly_map)
+        features_t = []
+        features_s = []
+        
 
     print('Total test time consumed : {}'.format(time.time() - start_time))
     print("Total auc score is :")
