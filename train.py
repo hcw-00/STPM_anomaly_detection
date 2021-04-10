@@ -18,17 +18,17 @@ from sklearn.metrics import roc_auc_score
 mean_train = [0.485, 0.456, 0.406]
 std_train = [0.229, 0.224, 0.225]
 
-def calc_avg_mean_std(img_names, img_root):
-    mean_sum = np.array([0., 0., 0.])
-    std_sum = np.array([0., 0., 0.])
-    n_images = len(img_names)
-    for img_name in img_names:
-        img = cv2.imread(os.path.join(img_root, img_name))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        mean, std = cv2.meanStdDev(img)
-        mean_sum += np.squeeze(mean)
-        std_sum += np.squeeze(std)
-    return (mean_sum / n_images / 255, std_sum / n_images / 255)
+# def calc_avg_mean_std(img_names, img_root):
+#     mean_sum = np.array([0., 0., 0.])
+#     std_sum = np.array([0., 0., 0.])
+#     n_images = len(img_names)
+#     for img_name in img_names:
+#         img = cv2.imread(os.path.join(img_root, img_name))
+#         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+#         mean, std = cv2.meanStdDev(img)
+#         mean_sum += np.squeeze(mean)
+#         std_sum += np.squeeze(std)
+#     return (mean_sum / n_images / 255, std_sum / n_images / 255)
 
 def data_transforms(input_size=256, mean_train=mean_train, std_train=std_train):
     data_transforms = transforms.Compose([
@@ -36,12 +36,11 @@ def data_transforms(input_size=256, mean_train=mean_train, std_train=std_train):
             transforms.Resize((input_size, input_size)),
             transforms.Normalize(mean=mean_train,
                                 std=std_train)])
-        
     return data_transforms
 
-def data_transforms_inv():
-    data_transforms_inv = transforms.Compose([transforms.Normalize(mean=list(-np.divide(mean_train, std_train)), std=list(np.divide(1, std_train)))])
-    return data_transforms_inv
+# def data_transforms_inv():
+#     data_transforms_inv = transforms.Compose([transforms.Normalize(mean=list(-np.divide(mean_train, std_train)), std=list(np.divide(1, std_train)))])
+#     return data_transforms_inv
 
 def copy_files(src, dst, ignores=[]):
     src_files = os.listdir(src)
@@ -96,9 +95,7 @@ def get_args():
     return args
 
 if __name__ == '__main__':
-    # torch.cuda.set_device(1)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print ('Available devices ', torch.cuda.device_count())
     print ('Current cuda device ', torch.cuda.current_device())
     print(torch.cuda.get_device_name(device))
@@ -116,10 +113,9 @@ if __name__ == '__main__':
     input_size = args.input_size
     save_src_code = args.save_src_code
     project_path = args.project_path
-    logs_path = os.path.join(project_path, 'logs')
-    weight_save_path = os.path.join(project_path, 'saved')
-    os.makedirs(logs_path, exist_ok=True)
-    os.makedirs(weight_save_path, exist_ok=True)
+    if save_weight:
+        weight_save_path = os.path.join(project_path, 'saved')
+        os.makedirs(weight_save_path, exist_ok=True)
     if save_src_code:
         source_code_save_path = os.path.join(project_path, 'src')
         os.makedirs(source_code_save_path, exist_ok=True)
@@ -185,6 +181,7 @@ if __name__ == '__main__':
                 
                 _ = model_t(batch)
                 _ = model_s(batch)
+                # get loss using features.
                 loss = cal_loss(features_s, features_t, criterion)
                 loss.backward()
                 optimizer.step()
