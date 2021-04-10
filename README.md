@@ -28,6 +28,6 @@ MVTecAD pixel-level AUC-ROC score (mean of 3 trials)
 | transistor | 0.825 | 0.562|
 | zipper | 0.985 | 0.982|
 
-Under testing.  
+Under test.  
 
 notice : This code is not official code and not verified yet.   
