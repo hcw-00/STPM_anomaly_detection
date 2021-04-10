@@ -30,4 +30,4 @@ MVTecAD pixel-level AUC-ROC score (mean of 3 trials)
 
 Under testing.  
 
-notice : This code is not official code and not verified yet. 
+notice : This code is not official code and not verified yet.   
