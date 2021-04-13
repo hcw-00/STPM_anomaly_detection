@@ -32,7 +32,7 @@ Under test.
 
 notice : This code is not official code and not verified yet.   
 
-### Localization samples   
+### Localization results   
 
 
 ![plot](./samples/bent_003_arr.png)
