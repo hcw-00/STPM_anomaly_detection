@@ -2,7 +2,9 @@
 Unofficial pytorch implementation of  
 Student-Teacher Feature Pyramid Matching for Unsupervised Anomaly Detection (STPM)  
 \- Guodong Wang, Shumin Han, Errui Ding, Di Huang  (2021)  
-https://arxiv.org/abs/2103.04257v2 
+https://arxiv.org/abs/2103.04257v2  
+
+notice : This code is not official code and not verified yet. 
 
 ### Usage 
 ~~~
@@ -28,14 +30,12 @@ python train.py --dataset_path '...\mvtec_anomaly_detection\bottle' --project_pa
 | transistor | 0.825 | 0.562|
 | zipper | 0.985 | 0.982|
 
-Under test.  
-
-notice : This code is not official code and not verified yet.   
+Under test.    
 
 ### Localization results   
 
 
-![plot](./samples/bent_003_arr.png){ width=50% }
+![plot](./samples/bent_003_arr.png)
 ![plot](./samples/bent_009_arr.png)
 ![plot](./samples/broken_000_arr.png)
 ![plot](./samples/metal_contamination_003_arr.png)
