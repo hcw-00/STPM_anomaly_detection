@@ -81,15 +81,22 @@ def cal_anomaly_map(fs_list, ft_list, out_size=256):
         anomaly_map *= a_map
     return anomaly_map
 
+def show_cam_on_image(img, anomaly_map):
+    heatmap = cv2.applyColorMap(np.uint8(anomaly_map), cv2.COLORMAP_JET)
+    heatmap = np.float32(heatmap)/255
+    cam = heatmap + np.float32(img)/255
+    cam = cam / np.max(cam)
+    return np.uint8(255 * cam)
+
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
     parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\grid')
-    parser.add_argument('--num_epoch', default=1)
+    parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--input_size', default=256)
     parser.add_argument('--project_path', default='D:/Project_Train_Results/mvtec_anomaly_detection/bottle')
-    parser.add_argument('--save_weight', default=False)
+    parser.add_argument('--save_weight', default=True)
     parser.add_argument('--save_src_code', default=False)
     args = parser.parse_args()
     return args
@@ -106,6 +113,7 @@ if __name__ == '__main__':
     
     args = get_args()
     dataset_path = args.dataset_path
+    category = dataset_path.split('\\')[-1]
     num_epochs = args.num_epoch
     lr = args.lr
     batch_size = args.batch_size
@@ -113,6 +121,8 @@ if __name__ == '__main__':
     input_size = args.input_size
     save_src_code = args.save_src_code
     project_path = args.project_path
+    sample_path = os.path.join(project_path, 'sample')
+    os.makedirs(sample_path, exist_ok=True)
     if save_weight:
         weight_save_path = os.path.join(project_path, 'saved')
         os.makedirs(weight_save_path, exist_ok=True)
@@ -139,8 +149,7 @@ if __name__ == '__main__':
     ################################################
     ###             Define Network               ###
     ################################################
-    features_t = []
-    features_s = []
+    
     def hook_t(module, input, output):
         features_t.append(output)
     def hook_s(module, input, output):
@@ -178,16 +187,14 @@ if __name__ == '__main__':
             batch = batch.to(device)
             optimizer.zero_grad()
             with torch.set_grad_enabled(True):
-                
+                features_t = []
+                features_s = []
                 _ = model_t(batch)
                 _ = model_s(batch)
                 # get loss using features.
                 loss = cal_loss(features_s, features_t, criterion)
                 loss.backward()
                 optimizer.step()
-
-                features_t = []
-                features_s = []
 
             if idx%2 == 0:
                 print('Epoch : {} | Loss : {:.4f}'.format(epoch, float(loss.data)))
@@ -196,8 +203,8 @@ if __name__ == '__main__':
     print('Train end.')
     if save_weight:
         print('Save weights.')
-        torch.save(model_t.state_dict(), os.path.join(weight_save_path, 'model_t.pth'))
-        torch.save(model_s.state_dict(), os.path.join(weight_save_path, 'model_s.pth'))
+        torch.save(model_t.state_dict(), os.path.join(weight_save_path, f'{category}_model_t.pth'))
+        torch.save(model_s.state_dict(), os.path.join(weight_save_path, f'{category}_model_s.pth'))
 
 
     ################################################
@@ -221,23 +228,36 @@ if __name__ == '__main__':
         test_img_path = test_imgs[i]
         gt_img_path = gt_imgs[i]
         assert os.path.split(test_img_path)[1].split('.')[0] == os.path.split(gt_img_path)[1].split('_')[0], "Something wrong with test and ground truth pair!"
+        defect_type = os.path.split(os.path.split(test_img_path)[0])[1]
+        img_name = os.path.split(test_img_path)[1].split('.')[0]
         test_img_o = cv2.imread(test_img_path)
+        test_img_o = cv2.resize(test_img_o, (input_size, input_size))
         test_img = Image.fromarray(test_img_o)
         test_img = data_transform(test_img)
         test_img = torch.unsqueeze(test_img, 0).to(device)
         with torch.set_grad_enabled(False):
+            features_t = []
+            features_s = []
             _ = model_t(test_img)
             _ = model_s(test_img)
+        # get anomaly map from features
         anomaly_map = cal_anomaly_map(features_s, features_t, out_size=input_size)
-        cv2.imwrite(f'test_{i}.jpg', anomaly_map[0,0,:,:].to('cpu').detach().numpy()*255)
-        anomaly_map = anomaly_map[0,0,:,:].to('cpu').detach().numpy().ravel()
-        plt.imshow(anomaly_map)
+        anomaly_map = anomaly_map[0,0,:,:].to('cpu').detach().numpy()
+        anomaly_val_list.extend(anomaly_map.ravel())
+
         gt_img = cv2.imread(gt_img_path,0)
         gt_img = cv2.resize(gt_img, (input_size, input_size)).ravel()//255
         gt_val_list.extend(gt_img)
-        anomaly_val_list.extend(anomaly_map)
-        features_t = []
-        features_s = []
+        
+        # normalize anomaly amp
+        a_min, a_max = anomaly_map.min(), anomaly_map.max()
+        anomaly_map_norm = (anomaly_map-a_min)/(a_max - a_min)
+        # show anomaly map on image
+        temp_cam = show_cam_on_image(test_img_o, anomaly_map_norm*255)
+        # save images
+        cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}.jpg'), test_img_o)
+        cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_norm.jpg'), anomaly_map_norm*255)        
+        cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_hm.jpg'), temp_cam)
         
 
     print('Total test time consumed : {}'.format(time.time() - start_time))
