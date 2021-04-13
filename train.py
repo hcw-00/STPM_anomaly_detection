@@ -12,7 +12,7 @@ import time
 from torchvision.models import resnet18
 from PIL import Image
 from sklearn.metrics import roc_auc_score
-
+import matplotlib.pyplot as plt
 
 #imagenet
 mean_train = [0.485, 0.456, 0.406]
@@ -84,7 +84,7 @@ def cal_anomaly_map(fs_list, ft_list, out_size=256):
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
     parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\grid')
-    parser.add_argument('--num_epoch', default=100)
+    parser.add_argument('--num_epoch', default=1)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--input_size', default=256)
@@ -194,6 +194,11 @@ if __name__ == '__main__':
 
     print('Total time consumed : {}'.format(time.time() - start_time))
     print('Train end.')
+    if save_weight:
+        print('Save weights.')
+        torch.save(model_t.state_dict(), os.path.join(weight_save_path, 'model_t.pth'))
+        torch.save(model_s.state_dict(), os.path.join(weight_save_path, 'model_s.pth'))
+
 
     ################################################
     ###               Start Test                 ###
@@ -224,7 +229,9 @@ if __name__ == '__main__':
             _ = model_t(test_img)
             _ = model_s(test_img)
         anomaly_map = cal_anomaly_map(features_s, features_t, out_size=input_size)
+        cv2.imwrite(f'test_{i}.jpg', anomaly_map[0,0,:,:].to('cpu').detach().numpy()*255)
         anomaly_map = anomaly_map[0,0,:,:].to('cpu').detach().numpy().ravel()
+        plt.imshow(anomaly_map)
         gt_img = cv2.imread(gt_img_path,0)
         gt_img = cv2.resize(gt_img, (input_size, input_size)).ravel()//255
         gt_val_list.extend(gt_img)
