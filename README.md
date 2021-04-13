@@ -31,3 +31,5 @@ MVTecAD pixel-level AUC-ROC score (mean of 3 trials)
 Under test.  
 
 notice : This code is not official code and not verified yet.   
+
+![plot](./samples/bent_000.jpg)
