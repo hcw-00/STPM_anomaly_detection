@@ -32,4 +32,9 @@ Under test.
 
 notice : This code is not official code and not verified yet.   
 
-![plot](./samples/bent_000.jpg)
+![plot](./samples/bent_003_arr.png)
+![plot](./samples/bent_009_arr.png)
+![plot](./samples/broken_000_arr.png)
+![plot](./samples/metal_contamination_003_arr.png)
+![plot](./samples/thread_001_arr.png)
+![plot](./samples/thread_005_arr.png)
