@@ -4,12 +4,12 @@ Student-Teacher Feature Pyramid Matching for Unsupervised Anomaly Detection (STP
 \- Guodong Wang, Shumin Han, Errui Ding, Di Huang  (2021)  
 https://arxiv.org/abs/2103.04257v2 
 
-Usage 
+### Usage 
 ~~~
 python train.py --dataset_path '...\mvtec_anomaly_detection\bottle' --project_path 'path\to\save\results'
 ~~~
 
-MVTecAD pixel-level AUC-ROC score (mean of 3 trials)
+### MVTecAD pixel-level AUC-ROC score (mean of 3 trials)
 | Category | Original paper | This code |
 | :-----: | :-: | :-: |
 | carpet | 0.988 | 0.984|
@@ -32,7 +32,9 @@ Under test.
 
 notice : This code is not official code and not verified yet.   
 
-Localization samples   
+### Localization samples   
+
+
 ![plot](./samples/bent_003_arr.png)
 ![plot](./samples/bent_009_arr.png)
 ![plot](./samples/broken_000_arr.png)
