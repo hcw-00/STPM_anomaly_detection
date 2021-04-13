@@ -35,7 +35,7 @@ notice : This code is not official code and not verified yet.
 ### Localization samples   
 
 
-![plot](./samples/bent_003_arr.png){:height="36px" width="36px"}.
+![plot](./samples/bent_003_arr.png){:height="36px" width="36px"}
 ![plot](./samples/bent_009_arr.png)
 ![plot](./samples/broken_000_arr.png)
 ![plot](./samples/metal_contamination_003_arr.png)
