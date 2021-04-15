@@ -8,7 +8,7 @@ notice : This code is not official code and not verified yet.
 
 ### Usage 
 ~~~
-python train.py --phase 'train'('test') --dataset_path '...\mvtec_anomaly_detection\bottle' --project_path 'path\to\save\results'
+python train.py --phase 'train or test' --dataset_path '...\mvtec_anomaly_detection\bottle' --project_path 'path\to\save\results'
 ~~~
 
 ### MVTecAD pixel-level AUC-ROC score (mean of 3 trials)
