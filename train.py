@@ -71,6 +71,7 @@ def cal_loss(fs_list, ft_list, criterion):
 def cal_anomaly_map(fs_list, ft_list, out_size=256):
     pdist = torch.nn.PairwiseDistance(p=2, keepdim=True)
     anomaly_map = torch.ones([ft_list[0].shape[0], 1, out_size, out_size]).to(device)
+    a_map_list = []
     for i in range(len(ft_list)):
         fs = fs_list[i]
         ft = ft_list[i]
@@ -78,8 +79,9 @@ def cal_anomaly_map(fs_list, ft_list, out_size=256):
         ft_norm = torch.divide(ft, torch.norm(ft, p=2, dim=1, keepdim=True))
         a_map = 0.5*pdist(fs_norm, ft_norm)**2
         a_map = F.interpolate(a_map, size=out_size, mode='bilinear')
+        a_map_list.append(a_map)
         anomaly_map *= a_map
-    return anomaly_map
+    return anomaly_map, a_map_list
 
 def show_cam_on_image(img, anomaly_map):
     heatmap = cv2.applyColorMap(np.uint8(anomaly_map), cv2.COLORMAP_JET)
@@ -90,7 +92,7 @@ def show_cam_on_image(img, anomaly_map):
 
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
-    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\grid')
+    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\bottle')
     parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
@@ -241,13 +243,13 @@ if __name__ == '__main__':
             _ = model_t(test_img)
             _ = model_s(test_img)
         # get anomaly map from features
-        anomaly_map = cal_anomaly_map(features_s, features_t, out_size=input_size)
+        anomaly_map, _ = cal_anomaly_map(features_s, features_t, out_size=input_size)
         anomaly_map = anomaly_map[0,0,:,:].to('cpu').detach().numpy()
         anomaly_val_list.extend(anomaly_map.ravel())
 
-        gt_img = cv2.imread(gt_img_path,0)
-        gt_img = cv2.resize(gt_img, (input_size, input_size)).ravel()//255
-        gt_val_list.extend(gt_img)
+        gt_img_o = cv2.imread(gt_img_path,0)
+        gt_img_o = cv2.resize(gt_img_o, (input_size, input_size)).ravel()
+        gt_val_list.extend(gt_img_o//255)
         
         # normalize anomaly amp
         a_min, a_max = anomaly_map.min(), anomaly_map.max()
@@ -258,6 +260,7 @@ if __name__ == '__main__':
         cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}.jpg'), test_img_o)
         cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_norm.jpg'), anomaly_map_norm*255)        
         cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_hm.jpg'), temp_cam)
+        cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_gt.jpg'), gt_img_o)
         
 
     print('Total test time consumed : {}'.format(time.time() - start_time))
