@@ -70,7 +70,8 @@ def cal_loss(fs_list, ft_list, criterion):
 
 def cal_anomaly_map(fs_list, ft_list, out_size=256):
     pdist = torch.nn.PairwiseDistance(p=2, keepdim=True)
-    anomaly_map = torch.ones([ft_list[0].shape[0], 1, out_size, out_size]).to(device)
+    anomaly_map = np.ones([out_size, out_size])
+    a_map_list = []
     for i in range(len(ft_list)):
         fs = fs_list[i]
         ft = ft_list[i]
@@ -78,8 +79,10 @@ def cal_anomaly_map(fs_list, ft_list, out_size=256):
         ft_norm = torch.divide(ft, torch.norm(ft, p=2, dim=1, keepdim=True))
         a_map = 0.5*pdist(fs_norm, ft_norm)**2
         a_map = F.interpolate(a_map, size=out_size, mode='bilinear')
+        a_map = a_map[0,0,:,:].to('cpu').detach().numpy() # check
+        a_map_list.append(a_map)
         anomaly_map *= a_map
-    return anomaly_map
+    return anomaly_map, a_map_list
 
 def show_cam_on_image(img, anomaly_map):
     heatmap = cv2.applyColorMap(np.uint8(anomaly_map), cv2.COLORMAP_JET)
@@ -88,18 +91,176 @@ def show_cam_on_image(img, anomaly_map):
     cam = cam / np.max(cam)
     return np.uint8(255 * cam)
 
+def cvt2heatmap(gray):
+    heatmap = cv2.applyColorMap(np.uint8(gray), cv2.COLORMAP_JET)
+    return heatmap
+
+def heatmap_on_image(heatmap, image):
+    out = np.float32(heatmap)/255 + np.float32(image)/255
+    out = out / np.max(out)
+    return np.uint8(255 * out)
+
+def min_max_norm(image):
+    a_min, a_max = image.min(), image.max()
+    return (image-a_min)/(a_max - a_min)    
+
+class STPM():
+    def __init__(self, weight_save_path):
+        print()
+        self.weight_save_path = weight_save_path
+        self.load_model()
+        self.data_transform = data_transforms(input_size=input_size, mean_train=mean_train, std_train=std_train)
+
+    def load_dataset(self):
+        image_datasets = datasets.ImageFolder(root=os.path.join(dataset_path, 'train'), transform=self.data_transform)
+        self.dataloaders = DataLoader(image_datasets, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
+        dataset_sizes = {'train': len(image_datasets)}    
+        print('Dataset size : Train set - {}'.format(dataset_sizes['train']))    
+
+    def load_model(self):
+        self.features_t = []
+        self.features_s = []
+        def hook_t(module, input, output):
+            self.features_t.append(output)
+        def hook_s(module, input, output):
+            self.features_s.append(output)
+
+        self.model_t = resnet18(pretrained=True).to(device)
+        self.model_t.layer1[-1].register_forward_hook(hook_t)
+        self.model_t.layer2[-1].register_forward_hook(hook_t)
+        self.model_t.layer3[-1].register_forward_hook(hook_t)
+
+        self.model_s = resnet18(pretrained=False).to(device)
+        self.model_s.layer1[-1].register_forward_hook(hook_s)
+        self.model_s.layer2[-1].register_forward_hook(hook_s)
+        self.model_s.layer3[-1].register_forward_hook(hook_s)
+        
+    def train(self):
+
+        self.criterion = torch.nn.MSELoss(reduction='sum')
+        self.optimizer = torch.optim.SGD(self.model_s.parameters(), lr=lr, momentum=0.9, weight_decay=0.0001)
+
+        self.load_dataset()
+        
+        start_time = time.time()
+        global_step = 0
+
+        for epoch in range(num_epochs):
+            print('-'*20)
+            print('Time consumed : {}s'.format(time.time()-start_time))
+            print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+            print('-'*20)
+            self.model_t.eval()
+            self.model_s.train()
+            for idx, (batch, _) in enumerate(self.dataloaders): # batch loop
+                global_step += 1
+                batch = batch.to(device)
+                self.optimizer.zero_grad()
+                with torch.set_grad_enabled(True):
+                    self.features_t = []
+                    self.features_s = []
+                    _ = self.model_t(batch)
+                    _ = self.model_s(batch)
+                    # get loss using features.
+                    loss = cal_loss(self.features_s, self.features_t, self.criterion)
+                    loss.backward()
+                    self.optimizer.step()
+
+                if idx%2 == 0:
+                    print('Epoch : {} | Loss : {:.4f}'.format(epoch, float(loss.data)))
+
+        print('Total time consumed : {}'.format(time.time() - start_time))
+        print('Train end.')
+        if save_weight:
+            print('Save weights.')
+            torch.save(self.model_s.state_dict(), os.path.join(self.weight_save_path, 'model_s.pth'))
+
+    def test(self):
+        print('Test phase start')
+        try:
+            self.model_s.load_state_dict(torch.load(glob.glob(self.weight_save_path+'/*.pth')[0]))
+        except:
+            raise Exception('Check saved model path.')
+        self.model_t.eval()
+        self.model_s.eval()
+        
+        test_path = os.path.join(dataset_path, 'test')
+        gt_path = os.path.join(dataset_path, 'ground_truth')
+        test_imgs = glob.glob(test_path + '/[!good]*/*.png', recursive=True)
+        gt_imgs = glob.glob(gt_path + '/[!good]*/*.png', recursive=True)
+        gt_val_list = []
+        pred_val_list = []
+        start_time = time.time()
+        for i in range(len(test_imgs)):
+            test_img_path = test_imgs[i]
+            gt_img_path = gt_imgs[i]
+            assert os.path.split(test_img_path)[1].split('.')[0] == os.path.split(gt_img_path)[1].split('_')[0], "Something wrong with test and ground truth pair!"
+            defect_type = os.path.split(os.path.split(test_img_path)[0])[1]
+            img_name = os.path.split(test_img_path)[1].split('.')[0]
+
+            # ground truth
+            gt_img_o = cv2.imread(gt_img_path,0)
+            gt_img_o = cv2.resize(gt_img_o, (input_size, input_size))
+            gt_val_list.extend(gt_img_o.ravel()//255)
+
+            # load image
+            test_img_o = cv2.imread(test_img_path)
+            test_img_o = cv2.resize(test_img_o, (input_size, input_size))
+            test_img = Image.fromarray(test_img_o)
+            test_img = self.data_transform(test_img)
+            test_img = torch.unsqueeze(test_img, 0).to(device)
+            with torch.set_grad_enabled(False):
+                self.features_t = []
+                self.features_s = []
+                _ = self.model_t(test_img)
+                _ = self.model_s(test_img)
+            # get anomaly map & each features
+            anomaly_map, a_maps = cal_anomaly_map(self.features_s, self.features_t, out_size=input_size)
+            pred_val_list.extend(anomaly_map.ravel())
+
+            # normalize anomaly amp
+            anomaly_map_norm = min_max_norm(anomaly_map)
+            anomaly_map_norm_hm = cvt2heatmap(anomaly_map_norm*255)
+            # 64x64 map
+            am64 = min_max_norm(a_maps[0])
+            am64 = cvt2heatmap(am64*255)
+            # 32x32 map
+            am32 = min_max_norm(a_maps[1])
+            am32 = cvt2heatmap(am32*255)
+            # 16x16 map
+            am16 = min_max_norm(a_maps[2])
+            am16 = cvt2heatmap(am16*255)
+            # anomaly map on image
+            heatmap = cvt2heatmap(anomaly_map_norm*255)
+            hm_on_img = heatmap_on_image(heatmap, test_img_o)
+
+            # save images
+            cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}.jpg'), test_img_o)
+            cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_am64.jpg'), am64)
+            cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_am32.jpg'), am32)
+            cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_am16.jpg'), am16)
+            cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_amap.jpg'), anomaly_map_norm_hm)
+            cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_amap_on_img.jpg'), hm_on_img)
+            cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_gt.jpg'), gt_img_o)
+            
+        print('Total test time consumed : {}'.format(time.time() - start_time))
+        print("Total auc score is :")
+        print(roc_auc_score(gt_val_list, pred_val_list))
+
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
-    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\grid')
+    parser.add_argument('--phase', default='test')
+    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\screw')
     parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default='D:/Project_Train_Results/mvtec_anomaly_detection/bottle')
+    parser.add_argument('--project_path', default='D:/Project_Train_Results/mvtec_anomaly_detection/screw')
     parser.add_argument('--save_weight', default=True)
     parser.add_argument('--save_src_code', default=False)
     args = parser.parse_args()
     return args
+
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -107,11 +268,8 @@ if __name__ == '__main__':
     print ('Current cuda device ', torch.cuda.current_device())
     print(torch.cuda.get_device_name(device))
 
-    ################################################
-    ###             Set Parameters               ###
-    ################################################
-    
     args = get_args()
+    phase = args.phase
     dataset_path = args.dataset_path
     category = dataset_path.split('\\')[-1]
     num_epochs = args.num_epoch
@@ -130,137 +288,13 @@ if __name__ == '__main__':
         source_code_save_path = os.path.join(project_path, 'src')
         os.makedirs(source_code_save_path, exist_ok=True)
         copy_files('./', source_code_save_path, ['.git','.vscode','__pycache__','logs','README']) # copy source code
-
-    ################################################
-    ###             Define Dataset               ###
-    ################################################
-    # calc mean, std
-    # train_root_path = os.path.join(dataset_path, 'train', 'good')
-    # mean_train, std_train = calc_avg_mean_std(os.listdir(train_root_path), train_root_path)
-    # print("mean_train : ", mean_train)
-    # print("mean_train : ", std_train)
-
-    data_transform = data_transforms(input_size=input_size, mean_train=mean_train, std_train=std_train)
-    # data_transforms_inv = data_transforms_inv()
-    image_datasets = datasets.ImageFolder(root=os.path.join(dataset_path, 'train'), transform=data_transform)
-    dataloaders = DataLoader(image_datasets, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
-    dataset_sizes = {'train': len(image_datasets)}
-
-    ################################################
-    ###             Define Network               ###
-    ################################################
     
-    def hook_t(module, input, output):
-        features_t.append(output)
-    def hook_s(module, input, output):
-        features_s.append(output)
 
-    model_t = resnet18(pretrained=True).to(device)
-    model_t.layer1[-1].register_forward_hook(hook_t)
-    model_t.layer2[-1].register_forward_hook(hook_t)
-    model_t.layer3[-1].register_forward_hook(hook_t)
-
-    model_s = resnet18(pretrained=False).to(device)
-    model_s.layer1[-1].register_forward_hook(hook_s)
-    model_s.layer2[-1].register_forward_hook(hook_s)
-    model_s.layer3[-1].register_forward_hook(hook_s)
-
-    criterion = torch.nn.MSELoss(reduction='sum')
-    optimizer = torch.optim.SGD(model_s.parameters(), lr=lr, momentum=0.9, weight_decay=0.0001)
-
-    ################################################
-    ###               Start Train                ###
-    ################################################
-
-    start_time = time.time()
-    global_step = 0
-    print('Dataset size : Train set - {}'.format(dataset_sizes['train']))
-    for epoch in range(num_epochs):
-        print('-'*20)
-        print('Time consumed : {}s'.format(time.time()-start_time))
-        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
-        print('-'*20)
-        model_t.eval()
-        model_s.train()
-        for idx, (batch, labels) in enumerate(dataloaders): # batch loop
-            global_step += 1
-            batch = batch.to(device)
-            optimizer.zero_grad()
-            with torch.set_grad_enabled(True):
-                features_t = []
-                features_s = []
-                _ = model_t(batch)
-                _ = model_s(batch)
-                # get loss using features.
-                loss = cal_loss(features_s, features_t, criterion)
-                loss.backward()
-                optimizer.step()
-
-            if idx%2 == 0:
-                print('Epoch : {} | Loss : {:.4f}'.format(epoch, float(loss.data)))
-
-    print('Total time consumed : {}'.format(time.time() - start_time))
-    print('Train end.')
-    if save_weight:
-        print('Save weights.')
-        torch.save(model_t.state_dict(), os.path.join(weight_save_path, f'{category}_model_t.pth'))
-        torch.save(model_s.state_dict(), os.path.join(weight_save_path, f'{category}_model_s.pth'))
-
-
-    ################################################
-    ###               Start Test                 ###
-    ################################################
-
-    print('Test phase start')
-    model_s.eval() # check
-    model_t.eval()
-    # anomaly_maps = []
-    # ground_truths = []
-    test_path = os.path.join(dataset_path, 'test')
-    gt_path = os.path.join(dataset_path, 'ground_truth')
-    test_imgs = glob.glob(test_path + '/[!good]*/*.png', recursive=True)
-    gt_imgs = glob.glob(gt_path + '/[!good]*/*.png', recursive=True)
-    gt_val_list = []
-    anomaly_val_list = []
-    auc_score_list = []
-    start_time = time.time()
-    for i in range(len(test_imgs)):
-        test_img_path = test_imgs[i]
-        gt_img_path = gt_imgs[i]
-        assert os.path.split(test_img_path)[1].split('.')[0] == os.path.split(gt_img_path)[1].split('_')[0], "Something wrong with test and ground truth pair!"
-        defect_type = os.path.split(os.path.split(test_img_path)[0])[1]
-        img_name = os.path.split(test_img_path)[1].split('.')[0]
-        test_img_o = cv2.imread(test_img_path)
-        test_img_o = cv2.resize(test_img_o, (input_size, input_size))
-        test_img = Image.fromarray(test_img_o)
-        test_img = data_transform(test_img)
-        test_img = torch.unsqueeze(test_img, 0).to(device)
-        with torch.set_grad_enabled(False):
-            features_t = []
-            features_s = []
-            _ = model_t(test_img)
-            _ = model_s(test_img)
-        # get anomaly map from features
-        anomaly_map = cal_anomaly_map(features_s, features_t, out_size=input_size)
-        anomaly_map = anomaly_map[0,0,:,:].to('cpu').detach().numpy()
-        anomaly_val_list.extend(anomaly_map.ravel())
-
-        gt_img = cv2.imread(gt_img_path,0)
-        gt_img = cv2.resize(gt_img, (input_size, input_size)).ravel()//255
-        gt_val_list.extend(gt_img)
-        
-        # normalize anomaly amp
-        a_min, a_max = anomaly_map.min(), anomaly_map.max()
-        anomaly_map_norm = (anomaly_map-a_min)/(a_max - a_min)
-        # show anomaly map on image
-        temp_cam = show_cam_on_image(test_img_o, anomaly_map_norm*255)
-        # save images
-        cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}.jpg'), test_img_o)
-        cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_norm.jpg'), anomaly_map_norm*255)        
-        cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_hm.jpg'), temp_cam)
-        
-
-    print('Total test time consumed : {}'.format(time.time() - start_time))
-    print("Total auc score is :")
-    print(roc_auc_score(gt_val_list, anomaly_val_list))
-
+    tsmodel = STPM(weight_save_path=weight_save_path)
+    if phase == 'train':
+        tsmodel.train()
+        tsmodel.test()
+    elif phase == 'test':
+        tsmodel.test()
+    else:
+        print('Phase argument must be train or test.')
