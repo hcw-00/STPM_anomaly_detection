@@ -190,7 +190,7 @@ class STPM():
         test_imgs = glob.glob(test_path + '/[!good]*/*.png', recursive=True)
         gt_imgs = glob.glob(gt_path + '/[!good]*/*.png', recursive=True)
         test_imgs.sort()
-        gt_imgs.sort
+        gt_imgs.sort()
         gt_val_list = []
         pred_val_list = []
         start_time = time.time()
