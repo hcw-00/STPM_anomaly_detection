@@ -113,7 +113,8 @@ class STPM():
 
     def load_dataset(self):
         image_datasets = datasets.ImageFolder(root=os.path.join(dataset_path, 'train'), transform=self.data_transform)
-        self.dataloaders = DataLoader(image_datasets, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
+        # self.dataloaders = DataLoader(image_datasets, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
+        self.dataloaders = DataLoader(image_datasets, batch_size=batch_size, shuffle=True, num_workers=0)
         dataset_sizes = {'train': len(image_datasets)}    
         print('Dataset size : Train set - {}'.format(dataset_sizes['train']))    
 
@@ -124,8 +125,8 @@ class STPM():
             self.features_t.append(output)
         def hook_s(module, input, output):
             self.features_s.append(output)
-
-        self.model_t = resnet18(pretrained=True).to(device)
+        
+        self.model_t = resnet18(pretrained=True).cuda()#to(device)
         self.model_t.layer1[-1].register_forward_hook(hook_t)
         self.model_t.layer2[-1].register_forward_hook(hook_t)
         self.model_t.layer3[-1].register_forward_hook(hook_t)
@@ -188,6 +189,8 @@ class STPM():
         gt_path = os.path.join(dataset_path, 'ground_truth')
         test_imgs = glob.glob(test_path + '/[!good]*/*.png', recursive=True)
         gt_imgs = glob.glob(gt_path + '/[!good]*/*.png', recursive=True)
+        test_imgs.sort()
+        gt_imgs.sort
         gt_val_list = []
         pred_val_list = []
         start_time = time.time()
@@ -249,13 +252,13 @@ class STPM():
 
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
-    parser.add_argument('--phase', default='test')
-    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\screw')
-    parser.add_argument('--num_epoch', default=100)
+    parser.add_argument('--phase', default='train')
+    parser.add_argument('--dataset_path', default=r'/home/changwoo/HDD/datasets/mvtec_anomaly_detection/grid')
+    parser.add_argument('--num_epoch', default=20)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default='D:/Project_Train_Results/mvtec_anomaly_detection/screw')
+    parser.add_argument('--project_path', default='/home/changwoo/HDD/project_results/STPM_ad/grid')
     parser.add_argument('--save_weight', default=True)
     parser.add_argument('--save_src_code', default=False)
     args = parser.parse_args()
@@ -263,10 +266,12 @@ def get_args():
 
 
 if __name__ == '__main__':
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = 'cpu'
     print ('Available devices ', torch.cuda.device_count())
     print ('Current cuda device ', torch.cuda.current_device())
-    print(torch.cuda.get_device_name(device))
+    # print(torch.cuda.get_device_name(device))
 
     args = get_args()
     phase = args.phase
