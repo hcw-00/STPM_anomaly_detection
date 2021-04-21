@@ -24,11 +24,11 @@ python train.py --phase 'train or test' --dataset_path '...\mvtec_anomaly_detect
 | capsule | 0.983 | 0.975(1)|
 | hazelnut | 0.985 | 0.941(1)|
 | metal nut | 0.976 | 0.967(1)|
-| pill | 0.978 | 0.915|
-| screw | 0.983 | 0.982|
+| pill | 0.978 | 0.948(1)|
+| screw | 0.983 | 0.984(1)|
 | toothbrush | 0.989 | 0.980(1) |
 | transistor | 0.825 | 0.569(1)|
-| zipper | 0.985 | 0.982|
+| zipper | 0.985 | 0.979(1)|
 
 Under test.    
 
