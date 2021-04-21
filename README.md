@@ -18,7 +18,7 @@ python train.py --phase 'train or test' --dataset_path '...\mvtec_anomaly_detect
 | grid | 0.99 | 0.989(1)|
 | leather | 0.993 | 0.988(1)|
 | tile | 0.974 | 0.937(1)|
-| wood | 0.972 | 0.856|
+| wood | 0.972 | 0.812(1)|
 | bottle | 0.988 | 0.968(1)|
 | cable | 0.955 | 0.718(1)|
 | capsule | 0.983 | 0.975(1)|
