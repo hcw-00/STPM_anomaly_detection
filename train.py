@@ -18,18 +18,6 @@ import matplotlib.pyplot as plt
 mean_train = [0.485, 0.456, 0.406]
 std_train = [0.229, 0.224, 0.225]
 
-# def calc_avg_mean_std(img_names, img_root):
-#     mean_sum = np.array([0., 0., 0.])
-#     std_sum = np.array([0., 0., 0.])
-#     n_images = len(img_names)
-#     for img_name in img_names:
-#         img = cv2.imread(os.path.join(img_root, img_name))
-#         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-#         mean, std = cv2.meanStdDev(img)
-#         mean_sum += np.squeeze(mean)
-#         std_sum += np.squeeze(std)
-#     return (mean_sum / n_images / 255, std_sum / n_images / 255)
-
 def data_transforms(input_size=256, mean_train=mean_train, std_train=std_train):
     data_transforms = transforms.Compose([
             transforms.ToTensor(),
@@ -86,8 +74,7 @@ def cal_anomaly_map(fs_list, ft_list, out_size=256):
 
 def show_cam_on_image(img, anomaly_map):
     heatmap = cv2.applyColorMap(np.uint8(anomaly_map), cv2.COLORMAP_JET)
-    heatmap = np.float32(heatmap)/255
-    cam = heatmap + np.float32(img)/255
+    cam = np.float32(heatmap) + np.float32(img)
     cam = cam / np.max(cam)
     return np.uint8(255 * cam)
 
@@ -187,8 +174,9 @@ class STPM():
         
         test_path = os.path.join(dataset_path, 'test')
         gt_path = os.path.join(dataset_path, 'ground_truth')
-        test_imgs = glob.glob(test_path + '/[!good]*/*.png', recursive=True)
-        gt_imgs = glob.glob(gt_path + '/[!good]*/*.png', recursive=True)
+        test_imgs = glob.glob(test_path + '/**/*.png', recursive=True)
+        test_imgs = [i for i in test_imgs if "good" not in i]
+        gt_imgs = glob.glob(gt_path + '/**/*.png', recursive=True)
         test_imgs.sort()
         gt_imgs.sort()
         gt_val_list = []
@@ -253,12 +241,12 @@ class STPM():
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
     parser.add_argument('--phase', default='train')
-    parser.add_argument('--dataset_path', default=r'/home/changwoo/HDD/datasets/mvtec_anomaly_detection/grid')
-    parser.add_argument('--num_epoch', default=20)
+    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\toothbrush')
+    parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default='/home/changwoo/HDD/project_results/STPM_ad/grid')
+    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\toothbrush')
     parser.add_argument('--save_weight', default=True)
     parser.add_argument('--save_src_code', default=False)
     args = parser.parse_args()
