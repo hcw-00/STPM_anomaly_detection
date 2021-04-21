@@ -241,13 +241,13 @@ class STPM():
 
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
-    parser.add_argument('--phase', default='test')
-    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\bottle')
+    parser.add_argument('--phase', default='train')
+    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\carpet')
     parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\bottle')
+    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\carpet')
     parser.add_argument('--save_weight', default=True)
     parser.add_argument('--save_src_code', default=False)
     args = parser.parse_args()
@@ -255,13 +255,13 @@ def get_args():
 
 
 if __name__ == '__main__':
-    
+    os.environ["CUDA_VISIBLE_DEVICES"]="0"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # device = 'cpu'
     print ('Available devices ', torch.cuda.device_count())
     print ('Current cuda device ', torch.cuda.current_device())
     # print(torch.cuda.get_device_name(device))
-
+    
     args = get_args()
     phase = args.phase
     dataset_path = args.dataset_path
