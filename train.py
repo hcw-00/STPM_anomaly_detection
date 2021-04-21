@@ -92,9 +92,7 @@ def min_max_norm(image):
     return (image-a_min)/(a_max - a_min)    
 
 class STPM():
-    def __init__(self, weight_save_path):
-        print()
-        self.weight_save_path = weight_save_path
+    def __init__(self):
         self.load_model()
         self.data_transform = data_transforms(input_size=input_size, mean_train=mean_train, std_train=std_train)
 
@@ -161,12 +159,12 @@ class STPM():
         print('Train end.')
         if save_weight:
             print('Save weights.')
-            torch.save(self.model_s.state_dict(), os.path.join(self.weight_save_path, 'model_s.pth'))
+            torch.save(self.model_s.state_dict(), os.path.join(weight_save_path, 'model_s.pth'))
 
     def test(self):
         print('Test phase start')
         try:
-            self.model_s.load_state_dict(torch.load(glob.glob(self.weight_save_path+'/*.pth')[0]))
+            self.model_s.load_state_dict(torch.load(glob.glob(weight_save_path+'/*.pth')[0]))
         except:
             raise Exception('Check saved model path.')
         self.model_t.eval()
@@ -243,11 +241,11 @@ def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
     parser.add_argument('--phase', default='train')
     parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\wood')
-    parser.add_argument('--num_epoch', default=100)
+    parser.add_argument('--num_epoch', default=1)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\wood')
+    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\wood_temp')
     parser.add_argument('--save_weight', default=True)
     parser.add_argument('--save_src_code', default=False)
     args = parser.parse_args()
@@ -284,7 +282,7 @@ if __name__ == '__main__':
         copy_files('./', source_code_save_path, ['.git','.vscode','__pycache__','logs','README']) # copy source code
     
 
-    stpm = STPM(weight_save_path=weight_save_path)
+    stpm = STPM()
     if phase == 'train':
         stpm.train()
         stpm.test()
