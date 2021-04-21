@@ -18,18 +18,6 @@ import matplotlib.pyplot as plt
 mean_train = [0.485, 0.456, 0.406]
 std_train = [0.229, 0.224, 0.225]
 
-# def calc_avg_mean_std(img_names, img_root):
-#     mean_sum = np.array([0., 0., 0.])
-#     std_sum = np.array([0., 0., 0.])
-#     n_images = len(img_names)
-#     for img_name in img_names:
-#         img = cv2.imread(os.path.join(img_root, img_name))
-#         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-#         mean, std = cv2.meanStdDev(img)
-#         mean_sum += np.squeeze(mean)
-#         std_sum += np.squeeze(std)
-#     return (mean_sum / n_images / 255, std_sum / n_images / 255)
-
 def data_transforms(input_size=256, mean_train=mean_train, std_train=std_train):
     data_transforms = transforms.Compose([
             transforms.ToTensor(),
