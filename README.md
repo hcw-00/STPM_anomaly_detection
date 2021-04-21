@@ -21,9 +21,9 @@ python train.py --phase 'train or test' --dataset_path '...\mvtec_anomaly_detect
 | wood | 0.972 | 0.856|
 | bottle | 0.988 | 0.968(1)|
 | cable | 0.955 | 0.718(1)|
-| capsule | 0.983 | 0.967|
-| hazelnut | 0.985 | 0.903|
-| metal nut | 0.976 | 0.967|
+| capsule | 0.983 | 0.975(1)|
+| hazelnut | 0.985 | 0.941(1)|
+| metal nut | 0.976 | 0.967(1)|
 | pill | 0.978 | 0.915|
 | screw | 0.983 | 0.982|
 | toothbrush | 0.989 | 0.980(1) |
