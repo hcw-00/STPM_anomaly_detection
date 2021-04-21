@@ -113,7 +113,7 @@ class STPM():
         def hook_s(module, input, output):
             self.features_s.append(output)
         
-        self.model_t = resnet18(pretrained=True).cuda()#to(device)
+        self.model_t = resnet18(pretrained=True).to(device)
         self.model_t.layer1[-1].register_forward_hook(hook_t)
         self.model_t.layer2[-1].register_forward_hook(hook_t)
         self.model_t.layer3[-1].register_forward_hook(hook_t)
@@ -284,11 +284,11 @@ if __name__ == '__main__':
         copy_files('./', source_code_save_path, ['.git','.vscode','__pycache__','logs','README']) # copy source code
     
 
-    tsmodel = STPM(weight_save_path=weight_save_path)
+    stpm = STPM(weight_save_path=weight_save_path)
     if phase == 'train':
-        tsmodel.train()
-        tsmodel.test()
+        stpm.train()
+        stpm.test()
     elif phase == 'test':
-        tsmodel.test()
+        stpm.test()
     else:
         print('Phase argument must be train or test.')
