@@ -62,8 +62,8 @@ def cal_loss(fs_list, ft_list, criterion):
         fs = fs_list[i]
         ft = ft_list[i]
         _, _, h, w = fs.shape
-        fs_norm = torch.divide(fs, torch.norm(fs, p=2, dim=1, keepdim=True))
-        ft_norm = torch.divide(ft, torch.norm(ft, p=2, dim=1, keepdim=True))
+        fs_norm = torch.div(fs, torch.norm(fs, p=2, dim=1, keepdim=True))
+        ft_norm = torch.div(ft, torch.norm(ft, p=2, dim=1, keepdim=True))
         f_loss = (0.5/(w*h))*criterion(fs_norm, ft_norm)
         tot_loss += f_loss
     return tot_loss
@@ -75,8 +75,8 @@ def cal_anomaly_map(fs_list, ft_list, out_size=256):
     for i in range(len(ft_list)):
         fs = fs_list[i]
         ft = ft_list[i]
-        fs_norm = torch.divide(fs, torch.norm(fs, p=2, dim=1, keepdim=True))
-        ft_norm = torch.divide(ft, torch.norm(ft, p=2, dim=1, keepdim=True))
+        fs_norm = torch.div(fs, torch.norm(fs, p=2, dim=1, keepdim=True))
+        ft_norm = torch.div(ft, torch.norm(ft, p=2, dim=1, keepdim=True))
         a_map = 0.5*pdist(fs_norm, ft_norm)**2
         a_map = F.interpolate(a_map, size=out_size, mode='bilinear')
         a_map = a_map[0,0,:,:].to('cpu').detach().numpy() # check
@@ -86,8 +86,7 @@ def cal_anomaly_map(fs_list, ft_list, out_size=256):
 
 def show_cam_on_image(img, anomaly_map):
     heatmap = cv2.applyColorMap(np.uint8(anomaly_map), cv2.COLORMAP_JET)
-    heatmap = np.float32(heatmap)/255
-    cam = heatmap + np.float32(img)/255
+    cam = np.float32(heatmap) + np.float32(img)
     cam = cam / np.max(cam)
     return np.uint8(255 * cam)
 
@@ -187,13 +186,15 @@ class STPM():
         
         test_path = os.path.join(dataset_path, 'test')
         gt_path = os.path.join(dataset_path, 'ground_truth')
-        test_imgs = glob.glob(test_path + '/[!good]*/*.png', recursive=True)
-        gt_imgs = glob.glob(gt_path + '/[!good]*/*.png', recursive=True)
+        test_imgs = glob.glob(test_path + '/**/*.png', recursive=True)
+        test_imgs = [i for i in test_imgs if "good" not in i]
+        gt_imgs = glob.glob(gt_path + '/**/*.png', recursive=True)
         test_imgs.sort()
         gt_imgs.sort()
         gt_val_list = []
         pred_val_list = []
         start_time = time.time()
+        print("Testset size : ", len(gt_imgs))        
         for i in range(len(test_imgs)):
             test_img_path = test_imgs[i]
             gt_img_path = gt_imgs[i]
@@ -252,13 +253,13 @@ class STPM():
 
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
-    parser.add_argument('--phase', default='train')
-    parser.add_argument('--dataset_path', default=r'/home/changwoo/HDD/datasets/mvtec_anomaly_detection/grid')
-    parser.add_argument('--num_epoch', default=20)
+    parser.add_argument('--phase', default='test')
+    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\bottle')
+    parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default='/home/changwoo/HDD/project_results/STPM_ad/grid')
+    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\bottle')
     parser.add_argument('--save_weight', default=True)
     parser.add_argument('--save_src_code', default=False)
     args = parser.parse_args()
