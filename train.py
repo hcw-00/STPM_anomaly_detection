@@ -52,6 +52,8 @@ def cal_loss(fs_list, ft_list, criterion):
         _, _, h, w = fs.shape
         fs_norm = torch.div(fs, torch.norm(fs, p=2, dim=1, keepdim=True))
         ft_norm = torch.div(ft, torch.norm(ft, p=2, dim=1, keepdim=True))
+        # fs_norm = F.normalize(fs, p=2)
+        # ft_norm = F.normalize(ft, p=2)
         f_loss = (0.5/(w*h))*criterion(fs_norm, ft_norm)
         tot_loss += f_loss
     return tot_loss
@@ -65,6 +67,8 @@ def cal_anomaly_map(fs_list, ft_list, out_size=256):
         ft = ft_list[i]
         fs_norm = torch.div(fs, torch.norm(fs, p=2, dim=1, keepdim=True))
         ft_norm = torch.div(ft, torch.norm(ft, p=2, dim=1, keepdim=True))
+        # fs_norm = F.normalize(fs, p=2)
+        # ft_norm = F.normalize(ft, p=2)
         a_map = 0.5*pdist(fs_norm, ft_norm)**2
         a_map = F.interpolate(a_map, size=out_size, mode='bilinear')
         a_map = a_map[0,0,:,:].to('cpu').detach().numpy() # check
@@ -172,13 +176,16 @@ class STPM():
         
         test_path = os.path.join(dataset_path, 'test')
         gt_path = os.path.join(dataset_path, 'ground_truth')
-        test_imgs = glob.glob(test_path + '/**/*.png', recursive=True)
-        test_imgs = [i for i in test_imgs if "good" not in i]
+        test_imgs_all = glob.glob(test_path + '/**/*.png', recursive=True)
+        test_imgs = [i for i in test_imgs_all if "good" not in i]
+        test_imgs_good = [i for i in test_imgs_all if "good" in i]
         gt_imgs = glob.glob(gt_path + '/**/*.png', recursive=True)
         test_imgs.sort()
         gt_imgs.sort()
-        gt_val_list = []
-        pred_val_list = []
+        gt_list_px_lvl = []
+        gt_list_img_lvl = []
+        pred_list_px_lvl = []
+        pred_list_img_lvl = []
         start_time = time.time()
         print("Testset size : ", len(gt_imgs))        
         for i in range(len(test_imgs)):
@@ -191,7 +198,7 @@ class STPM():
             # ground truth
             gt_img_o = cv2.imread(gt_img_path,0)
             gt_img_o = cv2.resize(gt_img_o, (input_size, input_size))
-            gt_val_list.extend(gt_img_o.ravel()//255)
+            gt_list_px_lvl.extend(gt_img_o.ravel()//255)
 
             # load image
             test_img_o = cv2.imread(test_img_path)
@@ -206,48 +213,75 @@ class STPM():
                 _ = self.model_s(test_img)
             # get anomaly map & each features
             anomaly_map, a_maps = cal_anomaly_map(self.features_s, self.features_t, out_size=input_size)
-            pred_val_list.extend(anomaly_map.ravel())
+            pred_list_px_lvl.extend(anomaly_map.ravel())
+            pred_list_img_lvl.append(np.max(anomaly_map))
+            gt_list_img_lvl.append(1)
 
-            # normalize anomaly amp
-            anomaly_map_norm = min_max_norm(anomaly_map)
-            anomaly_map_norm_hm = cvt2heatmap(anomaly_map_norm*255)
-            # 64x64 map
-            am64 = min_max_norm(a_maps[0])
-            am64 = cvt2heatmap(am64*255)
-            # 32x32 map
-            am32 = min_max_norm(a_maps[1])
-            am32 = cvt2heatmap(am32*255)
-            # 16x16 map
-            am16 = min_max_norm(a_maps[2])
-            am16 = cvt2heatmap(am16*255)
-            # anomaly map on image
-            heatmap = cvt2heatmap(anomaly_map_norm*255)
-            hm_on_img = heatmap_on_image(heatmap, test_img_o)
+            if args.save_anomaly_map:
+                # normalize anomaly amp
+                anomaly_map_norm = min_max_norm(anomaly_map)
+                anomaly_map_norm_hm = cvt2heatmap(anomaly_map_norm*255)
+                # 64x64 map
+                am64 = min_max_norm(a_maps[0])
+                am64 = cvt2heatmap(am64*255)
+                # 32x32 map
+                am32 = min_max_norm(a_maps[1])
+                am32 = cvt2heatmap(am32*255)
+                # 16x16 map
+                am16 = min_max_norm(a_maps[2])
+                am16 = cvt2heatmap(am16*255)
+                # anomaly map on image
+                heatmap = cvt2heatmap(anomaly_map_norm*255)
+                hm_on_img = heatmap_on_image(heatmap, test_img_o)
 
-            # save images
-            cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}.jpg'), test_img_o)
-            cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_am64.jpg'), am64)
-            cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_am32.jpg'), am32)
-            cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_am16.jpg'), am16)
-            cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_amap.jpg'), anomaly_map_norm_hm)
-            cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_amap_on_img.jpg'), hm_on_img)
-            cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_gt.jpg'), gt_img_o)
-            
+                # save images
+                cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}.jpg'), test_img_o)
+                cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_am64.jpg'), am64)
+                cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_am32.jpg'), am32)
+                cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_am16.jpg'), am16)
+                cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_amap.jpg'), anomaly_map_norm_hm)
+                cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_amap_on_img.jpg'), hm_on_img)
+                cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_gt.jpg'), gt_img_o)
+        
+        for i in range(len(test_imgs_good)):
+            test_img_path = test_imgs_good[i]
+            defect_type = os.path.split(os.path.split(test_img_path)[0])[1]
+            img_name = os.path.split(test_img_path)[1].split('.')[0]
+
+            # load image
+            test_img_o = cv2.imread(test_img_path)
+            test_img_o = cv2.resize(test_img_o, (input_size, input_size))
+            test_img = Image.fromarray(test_img_o)
+            test_img = self.data_transform(test_img)
+            test_img = torch.unsqueeze(test_img, 0).to(device)
+            with torch.set_grad_enabled(False):
+                self.features_t = []
+                self.features_s = []
+                _ = self.model_t(test_img)
+                _ = self.model_s(test_img)
+            # get anomaly map & each features
+            anomaly_map, a_maps = cal_anomaly_map(self.features_s, self.features_t, out_size=input_size)
+            pred_list_img_lvl.append(np.max(anomaly_map))
+            gt_list_img_lvl.append(0)
+                    
         print('Total test time consumed : {}'.format(time.time() - start_time))
-        print("Total auc score is :")
-        print(roc_auc_score(gt_val_list, pred_val_list))
+        print("Total pixel-level roc-auc score :")
+        print(roc_auc_score(gt_list_px_lvl, pred_list_px_lvl))
+        print("Total image-level roc-auc score :")
+        print(roc_auc_score(gt_list_img_lvl, pred_list_img_lvl))
 
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
-    parser.add_argument('--phase', default='train')
-    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\wood')
-    parser.add_argument('--num_epoch', default=1)
+    parser.add_argument('--phase', default='test')
+    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\grid')
+    parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\wood_temp')
-    parser.add_argument('--save_weight', default=True)
+    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\grid')
+    parser.add_argument('--save_weight', default=False)
     parser.add_argument('--save_src_code', default=False)
+    parser.add_argument('--save_anomaly_map', default=False)
     args = parser.parse_args()
     return args
 
@@ -273,8 +307,8 @@ if __name__ == '__main__':
     project_path = args.project_path
     sample_path = os.path.join(project_path, 'sample')
     os.makedirs(sample_path, exist_ok=True)
+    weight_save_path = os.path.join(project_path, 'saved')
     if save_weight:
-        weight_save_path = os.path.join(project_path, 'saved')
         os.makedirs(weight_save_path, exist_ok=True)
     if save_src_code:
         source_code_save_path = os.path.join(project_path, 'src')
