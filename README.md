@@ -29,7 +29,7 @@ python train.py --phase 'train or test' --dataset_path '...\mvtec_anomaly_detect
 | toothbrush | 0.989 | 0.980(1) | - | 0.8778(1) |
 | transistor | 0.825 | 0.569(1)| - | 0.4146(1) |
 | zipper | 0.985 | 0.979(1)| - | 0.9420(1) |
-| average | 0.970 | 0.916(1) | 0.955 | 0.881(1) |
+| mean | 0.970 | 0.916(1) | 0.955 | 0.881(1) |
 
 Under test.    
 
