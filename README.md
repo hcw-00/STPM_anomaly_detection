@@ -12,7 +12,7 @@ python train.py --phase 'train or test' --dataset_path '...\mvtec_anomaly_detect
 ~~~
 
 ### MVTecAD ROC-AUC score (mean of n trials)
-| Category | Paper (pixel-level) | This (pixel-level) | Paper (image-level) | This (image-level) |
+| Category | Paper / (pixel-level) | This / (pixel-level) | Paper / (image-level) | This / (image-level) |
 | :-----: | :-: | :-: | :-: | :-: |
 | carpet | 0.988 | 0.985(1)| - | 0.960(1) |
 | grid | 0.990 | 0.989(1)| - | 0.995(1)|
