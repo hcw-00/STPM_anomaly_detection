@@ -12,10 +12,10 @@ python train.py --phase 'train or test' --dataset_path '...\mvtec_anomaly_detect
 ~~~
 
 ### MVTecAD pixel-level AUC-ROC score (mean of n trials)
-| Category | Paper (pixel-level) | This code (pixel-level) | Paper (image-level) | This code (image-level) |
+| Category | Paper(pixel-level) | This code(pixel-level) | Paper(image-level) | This code(image-level) |
 | :-----: | :-: | :-: | :-: | :-: |
 | carpet | 0.988 | 0.985(1)| - | 0.9595(1) |
-| grid | 0.99 | 0.989(1)| - | 0.9950(1)|
+| grid | 0.990 | 0.989(1)| - | 0.9950(1)|
 | leather | 0.993 | 0.988(1)| - | 0.9942(1) |
 | tile | 0.974 | 0.937(1)| - | 0.9776(1) |
 | wood | 0.972 | 0.812(1)| - | 0.8860(1) |
@@ -29,27 +29,7 @@ python train.py --phase 'train or test' --dataset_path '...\mvtec_anomaly_detect
 | toothbrush | 0.989 | 0.980(1) | - | 0.8778(1) |
 | transistor | 0.825 | 0.569(1)| - | 0.4146(1) |
 | zipper | 0.985 | 0.979(1)| - | 0.9420(1) |
-| average | - | - | 0.955 | 0.881(1) |
-
-### MVTecAD image-level AUC-ROC score (mean of n trials)
-| Category | Paper (image-level) | This code (image-level) |
-| :-----: | :-: | :-: |
-| carpet    | - | 0.9595(1) |
-| grid      | - | 0.9950(1)|
-| leather   | - | 0.9942(1) |
-| tile      | - | 0.9776(1) |
-| wood      | - | 0.8860(1) |
-| bottle    | - | 0.9968(1) |
-| cable     | - | 0.7792(1) |
-| capsule   | - | 0.9306(1) |
-| hazelnut  | - | 0.8118(1) |
-| metal nut | - | 0.9985(1) |
-| pill      | - | 0.7840(1) |
-| screw     | - | 0.8692(1) |
-| toothbrush| - | 0.8778(1) |
-| transistor| - | 0.4146(1) |
-| zipper    | - | 0.9420(1) |
-| average   | 0.955 | 0.881(1) |
+| average | 0.970 | 0.916(1) | 0.955 | 0.881(1) |
 
 Under test.    
 
