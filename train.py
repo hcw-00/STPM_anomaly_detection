@@ -68,13 +68,13 @@ def cal_anomaly_map(fs_list, ft_list, out_size=256):
     for i in range(len(ft_list)):
         fs = fs_list[i]
         ft = ft_list[i]
-        fs_norm = torch.div(fs, torch.norm(fs, p=2, dim=1, keepdim=True))
-        ft_norm = torch.div(ft, torch.norm(ft, p=2, dim=1, keepdim=True))
-        # fs_norm = F.normalize(fs, p=2)
-        # ft_norm = F.normalize(ft, p=2)
-        # a_map = 0.5*pdist(fs_norm, ft_norm)**2
-        a_map = 1 - F.cosine_similarity(fs_norm, ft_norm)
-        a_map = torch.unsqueeze(a_map, dim=1)        
+        # fs_norm = torch.div(fs, torch.norm(fs, p=2, dim=1, keepdim=True))
+        # ft_norm = torch.div(ft, torch.norm(ft, p=2, dim=1, keepdim=True))
+        fs_norm = F.normalize(fs, p=2)
+        ft_norm = F.normalize(ft, p=2)
+        a_map = 0.5*pdist(fs_norm, ft_norm)**2
+        # a_map = 1 - F.cosine_similarity(fs_norm, ft_norm)
+        # a_map = torch.unsqueeze(a_map, dim=1)        
         a_map = F.interpolate(a_map, size=out_size, mode='bilinear')
         a_map = a_map[0,0,:,:].to('cpu').detach().numpy() # check
         a_map_list.append(a_map)
