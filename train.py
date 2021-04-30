@@ -277,7 +277,7 @@ def get_args():
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\wood_new_loss')
+    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\wood')
     parser.add_argument('--save_weight', default=True)
     parser.add_argument('--save_src_code', default=False)
     parser.add_argument('--save_anomaly_map', default=True)
