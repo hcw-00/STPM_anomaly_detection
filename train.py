@@ -50,11 +50,8 @@ def cal_loss(fs_list, ft_list, criterion):
         fs = fs_list[i]
         ft = ft_list[i]
         _, _, h, w = fs.shape
-        # fs_norm = torch.div(fs, torch.norm(fs, p=2, dim=1, keepdim=True))
-        # ft_norm = torch.div(ft, torch.norm(ft, p=2, dim=1, keepdim=True))
         fs_norm = F.normalize(fs, p=2)
         ft_norm = F.normalize(ft, p=2)
-        # f_loss = (0.5/(w*h))*criterion(fs_norm, ft_norm)
         # a_map = 1 - F.cosine_similarity(fs_norm, ft_norm)
         # f_loss = (1/(w*h))*torch.sum(a_map)
         f_loss = (0.5/(w*h))*criterion(fs_norm, ft_norm)
@@ -62,19 +59,15 @@ def cal_loss(fs_list, ft_list, criterion):
     return tot_loss
 
 def cal_anomaly_map(fs_list, ft_list, out_size=256):
-    pdist = torch.nn.PairwiseDistance(p=2, keepdim=True)
     anomaly_map = np.ones([out_size, out_size])
     a_map_list = []
     for i in range(len(ft_list)):
         fs = fs_list[i]
         ft = ft_list[i]
-        # fs_norm = torch.div(fs, torch.norm(fs, p=2, dim=1, keepdim=True))
-        # ft_norm = torch.div(ft, torch.norm(ft, p=2, dim=1, keepdim=True))
         fs_norm = F.normalize(fs, p=2)
         ft_norm = F.normalize(ft, p=2)
-        a_map = 0.5*pdist(fs_norm, ft_norm)**2
-        # a_map = 1 - F.cosine_similarity(fs_norm, ft_norm)
-        # a_map = torch.unsqueeze(a_map, dim=1)        
+        a_map = 1 - F.cosine_similarity(fs_norm, ft_norm)
+        a_map = torch.unsqueeze(a_map, dim=1)
         a_map = F.interpolate(a_map, size=out_size, mode='bilinear')
         a_map = a_map[0,0,:,:].to('cpu').detach().numpy() # check
         a_map_list.append(a_map)
@@ -279,12 +272,12 @@ class STPM():
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
     parser.add_argument('--phase', default='train')
-    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\grid')
+    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\wood')
     parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\grid_new_loss')
+    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\wood_new_loss')
     parser.add_argument('--save_weight', default=True)
     parser.add_argument('--save_src_code', default=False)
     parser.add_argument('--save_anomaly_map', default=True)
