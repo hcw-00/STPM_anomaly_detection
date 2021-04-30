@@ -243,6 +243,7 @@ class STPM():
                 cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_amap_on_img.jpg'), hm_on_img)
                 cv2.imwrite(os.path.join(sample_path, f'{defect_type}_{img_name}_gt.jpg'), gt_img_o)
         
+        # Test good image for image level score
         for i in range(len(test_imgs_good)):
             test_img_path = test_imgs_good[i]
             defect_type = os.path.split(os.path.split(test_img_path)[0])[1]
@@ -273,12 +274,12 @@ class STPM():
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
     parser.add_argument('--phase', default='test')
-    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\grid')
+    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\bottle')
     parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\grid')
+    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\bottle')
     parser.add_argument('--save_weight', default=False)
     parser.add_argument('--save_src_code', default=False)
     parser.add_argument('--save_anomaly_map', default=False)

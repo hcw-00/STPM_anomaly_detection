@@ -30,6 +30,26 @@ python train.py --phase 'train or test' --dataset_path '...\mvtec_anomaly_detect
 | transistor | 0.825 | 0.569(1)|
 | zipper | 0.985 | 0.979(1)|
 
+### MVTecAD image-level AUC-ROC score (mean of n trials)
+| Category | Original paper | This code |
+| :-----: | :-: | :-: |
+| carpet | - | 0.9595(1) |
+| grid | - | 0.9950(1)|
+| leather | - | 0.9942(1) |
+| tile | - | 0.9776(1) |
+| wood | - | 0.8860(1) |
+| bottle | - | 0.9968(1) |
+| cable | - | 0.7792(1) |
+| capsule | - | 0.9306(1) |
+| hazelnut | - | 0.8118(1) |
+| metal nut | - | 0.9985(1) |
+| pill | - | 0.7840(1) |
+| screw | - | 0.8692(1) |
+| toothbrush | - | 0.8778(1) |
+| transistor | - | 0.4146(1) |
+| zipper | - | 0.9420(1) |
+| average | 0.955 | 0.881(1) |
+
 Under test.    
 
 ### Localization results   
