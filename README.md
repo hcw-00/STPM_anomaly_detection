@@ -11,8 +11,8 @@ notice : This code is not official code and not verified yet.
 python train.py --phase 'train or test' --dataset_path '...\mvtec_anomaly_detection\bottle' --project_path 'path\to\save\results'
 ~~~
 
-### MVTecAD pixel-level AUC-ROC score (mean of n trials)
-| Category | Paper(pixel-level) | This code(pixel-level) | Paper(image-level) | This code(image-level) |
+### MVTecAD ROC-AUC score (mean of n trials)
+| Category | Paper (pixel-level) | This (pixel-level) | Paper (image-level) | This (image-level) |
 | :-----: | :-: | :-: | :-: | :-: |
 | carpet | 0.988 | 0.985(1)| - | 0.9595(1) |
 | grid | 0.990 | 0.989(1)| - | 0.9950(1)|
