@@ -18,10 +18,11 @@ import matplotlib.pyplot as plt
 mean_train = [0.485, 0.456, 0.406]
 std_train = [0.229, 0.224, 0.225]
 
-def data_transforms(input_size=256, mean_train=mean_train, std_train=std_train):
+def data_transforms(load_size=256, mean_train=mean_train, std_train=std_train):
     data_transforms = transforms.Compose([
+            transforms.Resize((load_size, load_size), Image.ANTIALIAS),
             transforms.ToTensor(),
-            transforms.Resize((input_size, input_size)),
+            transforms.CenterCrop(input_size),
             transforms.Normalize(mean=mean_train,
                                 std=std_train)])
     return data_transforms
@@ -56,9 +57,10 @@ def cal_loss(fs_list, ft_list, criterion):
         # f_loss = (1/(w*h))*torch.sum(a_map)
         f_loss = (0.5/(w*h))*criterion(fs_norm, ft_norm)
         tot_loss += f_loss
+
     return tot_loss
 
-def cal_anomaly_map(fs_list, ft_list, out_size=256):
+def cal_anomaly_map(fs_list, ft_list, out_size=224):
     anomaly_map = np.ones([out_size, out_size])
     a_map_list = []
     for i in range(len(ft_list)):
@@ -96,12 +98,11 @@ def min_max_norm(image):
 class STPM():
     def __init__(self):
         self.load_model()
-        self.data_transform = data_transforms(input_size=input_size, mean_train=mean_train, std_train=std_train)
+        self.data_transform = data_transforms(load_size=load_size, mean_train=mean_train, std_train=std_train)
 
     def load_dataset(self):
         image_datasets = datasets.ImageFolder(root=os.path.join(dataset_path, 'train'), transform=self.data_transform)
-        # self.dataloaders = DataLoader(image_datasets, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
-        self.dataloaders = DataLoader(image_datasets, batch_size=batch_size, shuffle=True, num_workers=0)
+        self.dataloaders = DataLoader(image_datasets, batch_size=batch_size, shuffle=True, num_workers=0) #, pin_memory=True)
         dataset_sizes = {'train': len(image_datasets)}    
         print('Dataset size : Train set - {}'.format(dataset_sizes['train']))    
 
@@ -125,7 +126,7 @@ class STPM():
         
     def train(self):
 
-        self.criterion = torch.nn.MSELoss(reduction='sum') # Does not use.
+        self.criterion = torch.nn.MSELoss(reduction='sum')
         self.optimizer = torch.optim.SGD(self.model_s.parameters(), lr=lr, momentum=0.9, weight_decay=0.0001)
 
         self.load_dataset()
@@ -195,12 +196,14 @@ class STPM():
 
             # ground truth
             gt_img_o = cv2.imread(gt_img_path,0)
-            gt_img_o = cv2.resize(gt_img_o, (input_size, input_size))
+            gt_img_o = cv2.resize(gt_img_o, (load_size, load_size))
+            gt_img_o = gt_img_o[(load_size-input_size)//2:(load_size+input_size)//2,(load_size-input_size)//2:(load_size+input_size)//2]
             gt_list_px_lvl.extend(gt_img_o.ravel()//255)
 
             # load image
             test_img_o = cv2.imread(test_img_path)
-            test_img_o = cv2.resize(test_img_o, (input_size, input_size))
+            test_img_o = cv2.resize(test_img_o, (load_size, load_size))
+            test_img_o = test_img_o[(load_size-input_size)//2:(load_size+input_size)//2,(load_size-input_size)//2:(load_size+input_size)//2]
             test_img = Image.fromarray(test_img_o)
             test_img = self.data_transform(test_img)
             test_img = torch.unsqueeze(test_img, 0).to(device)
@@ -249,7 +252,8 @@ class STPM():
 
             # load image
             test_img_o = cv2.imread(test_img_path)
-            test_img_o = cv2.resize(test_img_o, (input_size, input_size))
+            test_img_o = cv2.resize(test_img_o, (load_size, load_size))
+            test_img_o = test_img_o[(load_size-input_size)//2:(load_size+input_size)//2,(load_size-input_size)//2:(load_size+input_size)//2]
             test_img = Image.fromarray(test_img_o)
             test_img = self.data_transform(test_img)
             test_img = torch.unsqueeze(test_img, 0).to(device)
@@ -264,21 +268,22 @@ class STPM():
             gt_list_img_lvl.append(0)
                     
         print('Total test time consumed : {}'.format(time.time() - start_time))
-        print("Total pixel-level roc-auc score :")
+        print("Total pixel-level auc-roc score :")
         print(roc_auc_score(gt_list_px_lvl, pred_list_px_lvl))
-        print("Total image-level roc-auc score :")
+        print("Total image-level auc-roc score :")
         print(roc_auc_score(gt_list_img_lvl, pred_list_img_lvl))
 
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
-    parser.add_argument('--phase', default='train')
-    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\wood')
+    parser.add_argument('--phase', default='test')
+    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\transistor')
     parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
-    parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\wood')
-    parser.add_argument('--save_weight', default=True)
+    parser.add_argument('--load_size', default=256)
+    parser.add_argument('--input_size', default=224)
+    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\transistor_temp2')
+    parser.add_argument('--save_weight', default=False)
     parser.add_argument('--save_src_code', default=False)
     parser.add_argument('--save_anomaly_map', default=True)
     args = parser.parse_args()
@@ -300,7 +305,9 @@ if __name__ == '__main__':
     num_epochs = args.num_epoch
     lr = args.lr
     batch_size = args.batch_size
-    save_weight = args.save_weight
+    #save_weight = args.save_weight
+    save_weight = True
+    load_size = args.load_size
     input_size = args.input_size
     save_src_code = args.save_src_code
     project_path = args.project_path
