@@ -27,10 +27,6 @@ def data_transforms(load_size=256, mean_train=mean_train, std_train=std_train):
                                 std=std_train)])
     return data_transforms
 
-# def data_transforms_inv():
-#     data_transforms_inv = transforms.Compose([transforms.Normalize(mean=list(-np.divide(mean_train, std_train)), std=list(np.divide(1, std_train)))])
-#     return data_transforms_inv
-
 def copy_files(src, dst, ignores=[]):
     src_files = os.listdir(src)
     for file_name in src_files:
@@ -219,6 +215,7 @@ class STPM():
             pred_list_img_lvl.append(np.max(anomaly_map))
             gt_list_img_lvl.append(1)
 
+            # save anomaly map & features
             if args.save_anomaly_map:
                 # normalize anomaly amp
                 anomaly_map_norm = min_max_norm(anomaly_map)
@@ -264,7 +261,6 @@ class STPM():
                 self.features_s = []
                 _ = self.model_t(test_img)
                 _ = self.model_s(test_img)
-            # get anomaly map & each features
             anomaly_map, a_maps = cal_anomaly_map(self.features_s, self.features_t, out_size=input_size)
             pred_list_img_lvl.append(np.max(anomaly_map))
             gt_list_img_lvl.append(0)
@@ -277,15 +273,14 @@ class STPM():
 
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
-    parser.add_argument('--phase', default='train')
+    parser.add_argument('--phase', default='test')
     parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\transistor')
     parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--load_size', default=256)
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\transistor_new')
-    parser.add_argument('--save_weight', default=True)
+    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\transistor_new_temp')
     parser.add_argument('--save_src_code', default=True)
     parser.add_argument('--save_anomaly_map', default=True)
     args = parser.parse_args()
@@ -307,7 +302,6 @@ if __name__ == '__main__':
     num_epochs = args.num_epoch
     lr = args.lr
     batch_size = args.batch_size
-    #save_weight = args.save_weight
     save_weight = True
     load_size = args.load_size
     input_size = args.input_size
