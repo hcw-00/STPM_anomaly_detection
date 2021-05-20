@@ -35,9 +35,33 @@ python train.py --phase 'train or test' --dataset_path '...\mvtec_anomaly_detect
 ### Localization results   
 (will be updated)  
 
-![plot](./samples/bent_003_arr.png)
-![plot](./samples/bent_009_arr.png)
-![plot](./samples/broken_000_arr.png)
-![plot](./samples/metal_contamination_003_arr.png)
-![plot](./samples/thread_001_arr.png)
-![plot](./samples/thread_005_arr.png)
+![plot](./samples/bent_002_arr.png)
+![plot](./samples/broken_003_arr.png)
+![plot](./samples/metal_contamination_005_arr.png)
+
+![plot](./samples/bent_lead_003_arr.png)
+![plot](./samples/damaged_case_001_arr.png)
+
+![plot](./samples/bent_wire_003_arr.png)
+![plot](./samples/missing_cable_006_arr.png)
+
+![plot](./samples/color_002_arr.png)
+![plot](./samples/poke_008_arr.png)
+
+![plot](./samples/combined_006_arr.png)
+![plot](./samples/liquid_003_arr.png)
+![plot](./samples/scratch_006_arr.png)
+
+![plot](./samples/contamination_004_arr.png)
+![plot](./samples/contamination_007_arr.png)
+
+![plot](./samples/crack_005_arr.png)
+![plot](./samples/cut_001_arr.png)
+![plot](./samples/print_006_arr.png)
+
+![plot](./samples/crack_010_arr.png)
+![plot](./samples/faulty_imprint_006_arr.png)
+
+![plot](./samples/hole_002_arr.png)
+![plot](./samples/metal_contamination_008_arr.png)
+![plot](./samples/thread_013_arr.png)
