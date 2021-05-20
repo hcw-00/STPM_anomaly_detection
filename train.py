@@ -293,7 +293,7 @@ def get_args():
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"]="1"
+    os.environ["CUDA_VISIBLE_DEVICES"]="0"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # device = 'cpu'
     print ('Available devices ', torch.cuda.device_count())
