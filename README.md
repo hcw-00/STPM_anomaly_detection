@@ -33,7 +33,6 @@ python train.py --phase 'train or test' --dataset_path '...\mvtec_anomaly_detect
 
 
 ### Localization results   
-(will be updated)  
 
 ![plot](./samples/bent_002_arr.png)
 ![plot](./samples/broken_003_arr.png)
