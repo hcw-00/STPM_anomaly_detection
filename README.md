@@ -4,7 +4,7 @@ Student-Teacher Feature Pyramid Matching for Unsupervised Anomaly Detection (STP
 \- Guodong Wang, Shumin Han, Errui Ding, Di Huang  (2021)  
 https://arxiv.org/abs/2103.04257v2  
 
-notice : This code is not official code and not verified yet. 
+notice : A reason for low scores for some categories figured out. ('RGB' conversion in test phase..) I will update the results in a short time.
 
 ### Usage 
 ~~~

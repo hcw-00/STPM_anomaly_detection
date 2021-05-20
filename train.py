@@ -71,7 +71,7 @@ def cal_anomaly_map(fs_list, ft_list, out_size=224):
         a_map = 1 - F.cosine_similarity(fs_norm, ft_norm)
         a_map = torch.unsqueeze(a_map, dim=1)
         a_map = F.interpolate(a_map, size=out_size, mode='bilinear')
-        a_map = a_map[0,0,:,:].to('cpu').detach().numpy() # check
+        a_map = a_map[0,0,:,:].to('cpu').detach().numpy()
         a_map_list.append(a_map)
         anomaly_map *= a_map
     return anomaly_map, a_map_list
@@ -204,7 +204,8 @@ class STPM():
             test_img_o = cv2.imread(test_img_path)
             test_img_o = cv2.resize(test_img_o, (load_size, load_size))
             test_img_o = test_img_o[(load_size-input_size)//2:(load_size+input_size)//2,(load_size-input_size)//2:(load_size+input_size)//2]
-            test_img = Image.fromarray(test_img_o)
+            test_img = cv2.cvtColor(test_img_o, cv2.COLOR_BGR2RGB) # <~ here
+            test_img = Image.fromarray(test_img)
             test_img = self.data_transform(test_img)
             test_img = torch.unsqueeze(test_img, 0).to(device)
             with torch.set_grad_enabled(False):
@@ -254,7 +255,8 @@ class STPM():
             test_img_o = cv2.imread(test_img_path)
             test_img_o = cv2.resize(test_img_o, (load_size, load_size))
             test_img_o = test_img_o[(load_size-input_size)//2:(load_size+input_size)//2,(load_size-input_size)//2:(load_size+input_size)//2]
-            test_img = Image.fromarray(test_img_o)
+            test_img = cv2.cvtColor(test_img_o, cv2.COLOR_BGR2RGB) # <~ here
+            test_img = Image.fromarray(test_img)
             test_img = self.data_transform(test_img)
             test_img = torch.unsqueeze(test_img, 0).to(device)
             with torch.set_grad_enabled(False):
@@ -275,23 +277,23 @@ class STPM():
 
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
-    parser.add_argument('--phase', default='test')
+    parser.add_argument('--phase', default='train')
     parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\transistor')
     parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--load_size', default=256)
-    parser.add_argument('--input_size', default=224)
-    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\transistor_temp2')
-    parser.add_argument('--save_weight', default=False)
-    parser.add_argument('--save_src_code', default=False)
+    parser.add_argument('--input_size', default=256)
+    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\transistor_new')
+    parser.add_argument('--save_weight', default=True)
+    parser.add_argument('--save_src_code', default=True)
     parser.add_argument('--save_anomaly_map', default=True)
     args = parser.parse_args()
     return args
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"]="0"
+    os.environ["CUDA_VISIBLE_DEVICES"]="1"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # device = 'cpu'
     print ('Available devices ', torch.cuda.device_count())
