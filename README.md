@@ -11,6 +11,7 @@ https://github.com/hcw-00/STPM_pytorch_lightning
 
 ### Usage 
 ~~~
+# python 3.6
 pip install -r requirements.txt
 python train.py --phase 'train or test' --dataset_path '...\mvtec_anomaly_detection\bottle' --project_path 'path\to\save\results'
 ~~~
