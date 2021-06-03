@@ -12,7 +12,6 @@ import time
 from torchvision.models import resnet18
 from PIL import Image
 from sklearn.metrics import roc_auc_score
-import matplotlib.pyplot as plt
 
 #imagenet
 mean_train = [0.485, 0.456, 0.406]
@@ -273,14 +272,14 @@ class STPM():
 
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
-    parser.add_argument('--phase', default='test')
-    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection\transistor')
+    parser.add_argument('--phase', default='train')
+    parser.add_argument('--dataset_path', default=r'/home/changwoo/hdd/datasets/mvtec_anomaly_detection/tile') #D:\Dataset\mvtec_anomaly_detection\transistor')
     parser.add_argument('--num_epoch', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--load_size', default=256)
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\transistor_new_temp')
+    parser.add_argument('--project_path', default=r'/home/changwoo/hdd/project_results/STPM_results') #D:\Project_Train_Results\mvtec_anomaly_detection\transistor_new_temp')
     parser.add_argument('--save_src_code', default=True)
     parser.add_argument('--save_anomaly_map', default=True)
     args = parser.parse_args()
