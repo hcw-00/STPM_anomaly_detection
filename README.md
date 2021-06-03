@@ -8,11 +8,10 @@ notice(21/06/02) :
 I rewrote a well-organized pytorch lightning version. Please check.  
 https://github.com/hcw-00/STPM_pytorch_lightning
 
-Tested env :  
-pytorch==1.8.1  
 
 ### Usage 
 ~~~
+pip install -r requirements.txt
 python train.py --phase 'train or test' --dataset_path '...\mvtec_anomaly_detection\bottle' --project_path 'path\to\save\results'
 ~~~
 
