@@ -4,7 +4,12 @@ Student-Teacher Feature Pyramid Matching for Unsupervised Anomaly Detection (STP
 \- Guodong Wang, Shumin Han, Errui Ding, Di Huang  (2021)  
 https://arxiv.org/abs/2103.04257v2  
 
-notice(21/05/20) : A reason for low scores for some categories figured out. ('RGB' conversion in test phase..) All results are updated.
+notice(21/06/02) :  
+I rewrote a well-organized pytorch lightning version. Please check.  
+https://github.com/hcw-00/STPM_pytorch_lightning
+
+Tested env :  
+pytorch==1.8.1  
 
 ### Usage 
 ~~~
