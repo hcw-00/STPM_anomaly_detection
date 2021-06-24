@@ -74,14 +74,14 @@ mean_train = [0.485, 0.456, 0.406]
 std_train = [0.229, 0.224, 0.225]
 
 class MVTecDataset(Dataset):
-    def __init__(self, root, transform, input_size, phase):
+    def __init__(self, root, transform, gt_transform, phase):
         if phase=='train':
             self.img_path = os.path.join(root, 'train')
         else:
             self.img_path = os.path.join(root, 'test')
             self.gt_path = os.path.join(root, 'ground_truth')
         self.transform = transform
-        self.input_size = input_size
+        self.gt_transform = gt_transform
         # load dataset
         self.img_paths, self.gt_paths, self.labels, self.types = self.load_dataset() # self.labels => good : 0, anomaly : 1
 
@@ -123,12 +123,13 @@ class MVTecDataset(Dataset):
         img = Image.open(img_path).convert('RGB')
         img = self.transform(img)
         if gt == 0:
-            gt = torch.zeros([1, self.input_size, self.input_size])
+            gt = torch.zeros([1, img.size()[-2], img.size()[-2]])
         else:
             gt = Image.open(gt)
-            gt = gt.resize((self.input_size, self.input_size))
-            gt = transforms.ToTensor()(gt)
+            gt = self.gt_transform(gt)
         
+        assert img.size()[1:] == gt.size()[1:], "image.size != gt.size !!!"
+
         return img, gt, label, os.path.basename(img_path[:-4]), img_type
 
 def show_cam_on_image(img, anomaly_map):
@@ -216,8 +217,18 @@ class STPM(pl.LightningModule):
                         transforms.CenterCrop(args.input_size),
                         transforms.Normalize(mean=mean_train,
                                             std=std_train)])
+        self.gt_transforms = transforms.Compose([
+                        transforms.Resize((args.load_size, args.load_size)),
+                        transforms.ToTensor(),
+                        transforms.CenterCrop(args.input_size)])                                            
         self.inv_normalize = transforms.Normalize(mean=[-0.485/0.229, -0.456/0.224, -0.406/0.255], std=[1/0.229, 1/0.224, 1/0.255])
 
+    def init_results_list(self):
+        self.gt_list_px_lvl = []
+        self.pred_list_px_lvl = []
+        self.gt_list_img_lvl = []
+        self.pred_list_img_lvl = []
+        self.img_path_list = []    
 
     def init_features(self):
         self.features_t = []
@@ -294,12 +305,17 @@ class STPM(pl.LightningModule):
         return torch.optim.SGD(self.model_s.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
     def train_dataloader(self):
-        image_datasets = MVTecDataset(root=os.path.join(args.dataset_path,args.category), transform=self.data_transforms, input_size=args.load_size, phase='train')
+        image_datasets = MVTecDataset(root=os.path.join(args.dataset_path,args.category), transform=self.data_transforms, gt_transform=self.gt_transforms, phase='train')
         train_loader = DataLoader(image_datasets, batch_size=args.batch_size, shuffle=True, num_workers=0) #, pin_memory=True)
         return train_loader
 
+    def val_dataloader(self):
+        val_datasets = MVTecDataset(root=os.path.join(args.dataset_path,args.category), transform=self.data_transforms, gt_transform=self.gt_transforms, phase='test')
+        val_loader = DataLoader(val_datasets, batch_size=1, shuffle=False, num_workers=0) #, pin_memory=True) # only work on batch_size=1, now.
+        return val_loader
+
     def test_dataloader(self):
-        test_datasets = MVTecDataset(root=os.path.join(args.dataset_path,args.category), transform=self.data_transforms, input_size=args.load_size, phase='test')
+        test_datasets = MVTecDataset(root=os.path.join(args.dataset_path,args.category), transform=self.data_transforms, gt_transform=self.gt_transforms, phase='test')
         test_loader = DataLoader(test_datasets, batch_size=1, shuffle=False, num_workers=0) #, pin_memory=True) # only work on batch_size=1, now.
         return test_loader
 
@@ -307,7 +323,11 @@ class STPM(pl.LightningModule):
         self.model_t.eval() # to stop running_var move (maybe not critical)
         self.sample_path, self.source_code_save_path = prep_dirs(self.logger.log_dir)
     
+    def on_validation_start(self):
+        self.init_results_list()    
+
     def on_test_start(self):
+        self.init_results_list()
         self.sample_path, self.source_code_save_path = prep_dirs(self.logger.log_dir)
 
     def training_step(self, batch, batch_idx):
@@ -317,14 +337,26 @@ class STPM(pl.LightningModule):
         self.log('train_loss', loss, on_epoch=True)
         return loss
 
+    def validation_step(self, batch, batch_idx):
+        x, gt, label, file_name, x_type = batch
+        features_t, features_s = self(x)
+        # Get anomaly map
+        anomaly_map, _ = self.cal_anomaly_map(features_s, features_t, out_size=args.input_size)
+
+        gt_np = gt.cpu().numpy().astype(int)
+        self.gt_list_px_lvl.extend(gt_np.ravel())
+        self.pred_list_px_lvl.extend(anomaly_map.ravel())
+        self.gt_list_img_lvl.append(label.cpu().numpy()[0])
+        self.pred_list_img_lvl.append(anomaly_map.max())
+        self.img_path_list.extend(file_name)
+
     def test_step(self, batch, batch_idx):
         x, gt, label, file_name, x_type = batch
         features_t, features_s = self(x)
         
         # Get anomaly map
         anomaly_map, a_map_list = self.cal_anomaly_map(features_s, features_t, out_size=args.input_size)
-        
-        gt = transforms.CenterCrop(args.input_size)(gt)
+
         gt_np = gt.cpu().numpy().astype(int)
         self.gt_list_px_lvl.extend(gt_np.ravel())
         self.pred_list_px_lvl.extend(anomaly_map.ravel())
@@ -336,6 +368,12 @@ class STPM(pl.LightningModule):
         input_x = cv2.cvtColor(x.permute(0,2,3,1).cpu().numpy()[0]*255, cv2.COLOR_BGR2RGB)
         self.save_anomaly_map(anomaly_map, a_map_list, input_x, gt_np[0][0]*255, file_name[0], x_type[0])
 
+    def validation_epoch_end(self, outputs):
+        pixel_auc = roc_auc_score(self.gt_list_px_lvl, self.pred_list_px_lvl)
+        img_auc = roc_auc_score(self.gt_list_img_lvl, self.pred_list_img_lvl)
+        values = {'pixel_auc': pixel_auc, 'img_auc': img_auc}
+        self.log_dict(values)
+
     def test_epoch_end(self, outputs):
         print("Total pixel-level auc-roc score :")
         pixel_auc = roc_auc_score(self.gt_list_px_lvl, self.pred_list_px_lvl)
@@ -346,28 +384,28 @@ class STPM(pl.LightningModule):
         print('test_epoch_end')
         values = {'pixel_auc': pixel_auc, 'img_auc': img_auc}
         self.log_dict(values)
-        # 값 분리
-        anomaly_list = []
-        normal_list = []
-        for i in range(len(self.gt_list_img_lvl)):
-            if self.gt_list_img_lvl[i] == 1:
-                anomaly_list.append(self.pred_list_img_lvl[i])
-            else:
-                normal_list.append(self.pred_list_img_lvl[i])
+        # # 값 분리
+        # anomaly_list = []
+        # normal_list = []
+        # for i in range(len(self.gt_list_img_lvl)):
+        #     if self.gt_list_img_lvl[i] == 1:
+        #         anomaly_list.append(self.pred_list_img_lvl[i])
+        #     else:
+        #         normal_list.append(self.pred_list_img_lvl[i])
 
-        # thresholding
-        cal_confusion_matrix(self.gt_list_img_lvl, self.pred_list_img_lvl, img_path_list = self.img_path_list, thresh = 0.00097)
-        print()
-        with open(args.project_path + r'/results.txt', 'a') as f:
-            f.write(self.logger.log_dir + '\n')
-            f.write(args.category + ' : ' + str(values) + '\n')
+        # # thresholding
+        # cal_confusion_matrix(self.gt_list_img_lvl, self.pred_list_img_lvl, img_path_list = self.img_path_list, thresh = 0.00097)
+        # print()
+        # with open(args.project_path + r'/results.txt', 'a') as f:
+        #     f.write(self.logger.log_dir + '\n')
+        #     f.write(args.category + ' : ' + str(values) + '\n')
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
     parser.add_argument('--phase', choices=['train','test'], default='train')
-    parser.add_argument('--dataset_path', default=r'/home/changwoo/hdd/datasets/mvtec_anomaly_detection') #/tile') #'D:\Dataset\REVIEW_BOE_HKC_WHTM\REVIEW_for_anomaly\HKC'
-    parser.add_argument('--category', default='capsule')
+    parser.add_argument('--dataset_path', default=r'D:\Dataset\mvtec_anomaly_detection') #/tile') #'/home/changwoo/hdd/datasets/mvtec_anomaly_detection'
+    parser.add_argument('--category', default='grid')
     parser.add_argument('--num_epochs', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--momentum', default=0.9)
@@ -375,10 +413,11 @@ def get_args():
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--load_size', default=256) # 256
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default=r'/home/changwoo/hdd/project_results/STPM_lightning/210621') #210605') #
+    parser.add_argument('--project_path', default=r'D:\Project_Train_Results\mvtec_anomaly_detection\210624\test') #'/home/changwoo/hdd/project_results/STPM_lightning/210621') #210605') #
     parser.add_argument('--save_src_code', default=True)
     parser.add_argument('--save_anomaly_map', default=True)
     parser.add_argument('--amap_mode', choices=['mul','sum'], default='mul')
+    parser.add_argument('--val_freq', default=5)
     parser.add_argument('--weights_file_version', type=str, default=None)
     # parser.add_argument('--weights_file_version', type=str, default='version_1')
     args = parser.parse_args()
@@ -389,19 +428,18 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args = get_args()
     
-    trainer = pl.Trainer.from_argparse_args(args, default_root_dir=os.path.join(args.project_path, args.category), max_epochs=args.num_epochs, gpus=[0]) #, check_val_every_n_epoch=args.val_freq,  num_sanity_val_steps=0) # ,fast_dev_run=True)
+    trainer = pl.Trainer.from_argparse_args(args, default_root_dir=os.path.join(args.project_path, args.category), max_epochs=args.num_epochs, gpus=[0], check_val_every_n_epoch=args.val_freq, num_sanity_val_steps=0) #, check_val_every_n_epoch=args.val_freq,  num_sanity_val_steps=0) # ,fast_dev_run=True)
     
     if args.phase == 'train':
         model = STPM(hparams=args)
         trainer.fit(model)
         trainer.test(model)
     elif args.phase == 'test':
-        # selet weights file.
-        weights_file_path = auto_select_weights_file(args.weights_file_version) # auto select if args.weights_file_version == None
+        # select weight file.
+        weights_file_path = auto_select_weights_file(args.weights_file_version) # select latest weight if args.weights_file_version == None
         
         if weights_file_path != None:
             model = STPM(hparams=args).load_from_checkpoint(weights_file_path)
-            # model.load_from_checkpoint(weights_file_path) # separating "load_from_checkpoint" seems does not load weights properly.
             trainer.test(model)
         else:
             print('Weights file is not found!')
