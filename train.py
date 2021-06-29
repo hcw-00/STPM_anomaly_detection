@@ -309,10 +309,10 @@ class STPM(pl.LightningModule):
         train_loader = DataLoader(image_datasets, batch_size=args.batch_size, shuffle=True, num_workers=0) #, pin_memory=True)
         return train_loader
 
-    def val_dataloader(self):
-        val_datasets = MVTecDataset(root=os.path.join(args.dataset_path,args.category), transform=self.data_transforms, gt_transform=self.gt_transforms, phase='test')
-        val_loader = DataLoader(val_datasets, batch_size=1, shuffle=False, num_workers=0) #, pin_memory=True) # only work on batch_size=1, now.
-        return val_loader
+#     def val_dataloader(self):
+#         val_datasets = MVTecDataset(root=os.path.join(args.dataset_path,args.category), transform=self.data_transforms, gt_transform=self.gt_transforms, phase='test')
+#         val_loader = DataLoader(val_datasets, batch_size=1, shuffle=False, num_workers=0) #, pin_memory=True) # only work on batch_size=1, now.
+#         return val_loader
 
     def test_dataloader(self):
         test_datasets = MVTecDataset(root=os.path.join(args.dataset_path,args.category), transform=self.data_transforms, gt_transform=self.gt_transforms, phase='test')
@@ -323,8 +323,8 @@ class STPM(pl.LightningModule):
         self.model_t.eval() # to stop running_var move (maybe not critical)
         self.sample_path, self.source_code_save_path = prep_dirs(self.logger.log_dir)
     
-    def on_validation_start(self):
-        self.init_results_list()    
+#     def on_validation_start(self):
+#         self.init_results_list()    
 
     def on_test_start(self):
         self.init_results_list()
@@ -337,18 +337,18 @@ class STPM(pl.LightningModule):
         self.log('train_loss', loss, on_epoch=True)
         return loss
 
-    def validation_step(self, batch, batch_idx):
-        x, gt, label, file_name, x_type = batch
-        features_t, features_s = self(x)
-        # Get anomaly map
-        anomaly_map, _ = self.cal_anomaly_map(features_s, features_t, out_size=args.input_size)
+#     def validation_step(self, batch, batch_idx):
+#         x, gt, label, file_name, x_type = batch
+#         features_t, features_s = self(x)
+#         # Get anomaly map
+#         anomaly_map, _ = self.cal_anomaly_map(features_s, features_t, out_size=args.input_size)
 
-        gt_np = gt.cpu().numpy().astype(int)
-        self.gt_list_px_lvl.extend(gt_np.ravel())
-        self.pred_list_px_lvl.extend(anomaly_map.ravel())
-        self.gt_list_img_lvl.append(label.cpu().numpy()[0])
-        self.pred_list_img_lvl.append(anomaly_map.max())
-        self.img_path_list.extend(file_name)
+#         gt_np = gt.cpu().numpy().astype(int)
+#         self.gt_list_px_lvl.extend(gt_np.ravel())
+#         self.pred_list_px_lvl.extend(anomaly_map.ravel())
+#         self.gt_list_img_lvl.append(label.cpu().numpy()[0])
+#         self.pred_list_img_lvl.append(anomaly_map.max())
+#         self.img_path_list.extend(file_name)
 
     def test_step(self, batch, batch_idx):
         x, gt, label, file_name, x_type = batch
@@ -368,11 +368,11 @@ class STPM(pl.LightningModule):
         input_x = cv2.cvtColor(x.permute(0,2,3,1).cpu().numpy()[0]*255, cv2.COLOR_BGR2RGB)
         self.save_anomaly_map(anomaly_map, a_map_list, input_x, gt_np[0][0]*255, file_name[0], x_type[0])
 
-    def validation_epoch_end(self, outputs):
-        pixel_auc = roc_auc_score(self.gt_list_px_lvl, self.pred_list_px_lvl)
-        img_auc = roc_auc_score(self.gt_list_img_lvl, self.pred_list_img_lvl)
-        values = {'pixel_auc': pixel_auc, 'img_auc': img_auc}
-        self.log_dict(values)
+#     def validation_epoch_end(self, outputs):
+#         pixel_auc = roc_auc_score(self.gt_list_px_lvl, self.pred_list_px_lvl)
+#         img_auc = roc_auc_score(self.gt_list_img_lvl, self.pred_list_img_lvl)
+#         values = {'pixel_auc': pixel_auc, 'img_auc': img_auc}
+#         self.log_dict(values)
 
     def test_epoch_end(self, outputs):
         print("Total pixel-level auc-roc score :")
@@ -428,7 +428,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args = get_args()
     
-    trainer = pl.Trainer.from_argparse_args(args, default_root_dir=os.path.join(args.project_path, args.category), max_epochs=args.num_epochs, gpus=[0], check_val_every_n_epoch=args.val_freq, num_sanity_val_steps=0) #, check_val_every_n_epoch=args.val_freq,  num_sanity_val_steps=0) # ,fast_dev_run=True)
+    trainer = pl.Trainer.from_argparse_args(args, default_root_dir=os.path.join(args.project_path, args.category), max_epochs=args.num_epochs, gpus=[0]) #, check_val_every_n_epoch=args.val_freq,  num_sanity_val_steps=0) # ,fast_dev_run=True)
     
     if args.phase == 'train':
         model = STPM(hparams=args)
